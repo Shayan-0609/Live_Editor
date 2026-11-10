@@ -1,0 +1,186 @@
+html,
+body {
+  height: 100vh;
+  height: 100dvh;
+  width: 100vw;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+.bg-blue-tone {
+  background: linear-gradient(135deg, #0b132b 0%, #1d4ed8 50%, #06b6d4 100%);
+  background-attachment: fixed;
+}
+
+/* Flex Order for Layout Swapping via Hamburger */
+#editor-section {
+  order: 1;
+}
+#drag-splitter {
+  order: 2;
+}
+#preview-section {
+  order: 3;
+}
+
+#workspace-row.preview-on-top #preview-section {
+  order: 1;
+}
+#workspace-row.preview-on-top #drag-splitter {
+  order: 2;
+}
+#workspace-row.preview-on-top #editor-section {
+  order: 3;
+}
+
+/* Drag Splitter Styling */
+#drag-splitter {
+  cursor: row-resize;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 16px;
+  flex-shrink: 0;
+  touch-action: none;
+  z-index: 10;
+  width: 100%;
+}
+
+.splitter-bar {
+  width: 45px;
+  height: 4px;
+  background-color: rgba(255, 255, 255, 0.4);
+  border-radius: 2px;
+  transition: background-color 0.2s;
+}
+
+#drag-splitter:hover .splitter-bar,
+#drag-splitter:active .splitter-bar {
+  background-color: #06b6d4;
+}
+
+/* Interactive Hamburger Button Styling */
+#hamburger-btn {
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+/* The browser window */
+.window {
+  border: 3px solid #f1f1f1;
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
+  width: 100%;
+}
+
+/* Toolbar row using Flexbox */
+.toolbar-row {
+  padding: 6px 12px;
+  background: #f1f1f1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.column {
+  float: none !important;
+}
+
+.left {
+  width: 15%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.middle {
+  width: 73%;
+}
+
+.right {
+  width: 10%;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+/* Three dots */
+.dot {
+  height: 11px;
+  width: 11px;
+  background-color: #bbb;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.red {
+  background-color: #ed594a;
+}
+.yellow {
+  background-color: #fdd800;
+}
+.green {
+  background-color: #5ac05a;
+}
+
+/* Style the input field */
+input[type="text"] {
+  width: 100%;
+  border-radius: 3px;
+  border: none;
+  background-color: white;
+  height: 24px;
+  color: #666;
+  padding: 2px 8px;
+  outline: 0;
+  pointer-events: none;
+  font-size: 0.75rem;
+  margin-top: 0;
+}
+
+/* Three bars (hamburger menu) */
+.bar {
+  width: 16px;
+  height: 2.5px;
+  background-color: #aaa;
+  margin: 3px 0;
+  display: block;
+}
+
+.content {
+  width: 100%;
+  overflow: hidden;
+}
+
+.output {
+  display: block;
+  width: 100%;
+  height: 100%;
+  color: #000000;
+  background-color: #ffffff;
+  border: none;
+}
+
+/* Hide scrollbar for tab navigation */
+#sandboxTabs::-webkit-scrollbar {
+  display: none;
+}
+#sandboxTabs {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* CodeMirror styling */
+.CodeMirror {
+  height: 100% !important;
+  width: 100% !important;
+  font-size: 14px;
+}
+
+.CodeMirror-gutters {
+  border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+}

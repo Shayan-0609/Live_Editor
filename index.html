@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en" class="h-100">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sandbox App</title>
+    <meta name="description" content="Code SandBox (Multi-Tab) WebApp for html, css and javascript, using CodeMirror5, and bootstrap5.3+" />
+    <meta name="theme-color" content="#ced4da" />
+    
+    <!-- Favicons setup -->
+    <link rel="icon" href="assets/favicon.ico">
+    <link rel="icon" href="assets/favicon-32x32.png" type="image/png" sizes="32x32">
+    <link rel="icon" href="assets/favicon-16x16.png" type="image/png" sizes="16x16">
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+    
+    <!-- Bootstrap 5 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" defer></script>
+  
+    <!-- Google Fonts for Coding -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Google+Sans+Code:ital,wght@0,400;0,500;1,400;1,500&family=JetBrains+Mono:wght@400;500&family=Roboto+Mono:wght@400;500&family=Source+Code+Pro:wght@400;500&family=Ubuntu+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+
+    <!-- CodeMirror 5 Core -->
+    <link rel="stylesheet" href="CodeMirror-5/lib/codemirror.css" />
+    <script src="CodeMirror-5/lib/codemirror.js"></script>
+  
+    <!-- CodeMirror Themes -->
+    <link rel="stylesheet" href="CodeMirror-5/theme/dracula.css" />
+    <link rel="stylesheet" href="CodeMirror-5/theme/monokai.css" />
+  
+    <!-- CodeMirror Language Modes -->
+    <script src="CodeMirror-5/mode/xml/xml.js"></script>
+    <script src="CodeMirror-5/mode/javascript/javascript.js"></script>
+    <script src="CodeMirror-5/mode/css/css.js"></script>
+    <script src="CodeMirror-5/mode/htmlmixed/htmlmixed.js"></script>
+  
+    <!-- CodeMirror Useful Addons -->
+    <script src="CodeMirror-5/addon/edit/matchbrackets.js"></script>
+    <script src="CodeMirror-5/addon/edit/closebrackets.js"></script>
+    <script src="CodeMirror-5/addon/fold/xml-fold.js"></script>
+    <script src="CodeMirror-5/addon/edit/closetag.js"></script>
+
+    <!-- JS Beautify -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.11/beautify.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.11/beautify-css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.11/beautify-html.min.js"></script>
+  
+    <!-- SandBox Files -->
+    <link rel="stylesheet" href="css/sandbox_css.css" />
+    <script src="js/sandbox_script.js" defer></script>
+  </head>
+
+  <body class="bg-blue-tone h-100 d-flex flex-column overflow-hidden m-0">
+    <!-- Header -->
+    <header class="bg-transparent flex-shrink-0">
+      <div class="container-fluid px-3 border-bottom border-2 border-white border-opacity-10 py-2 shadow-sm d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 text-light fs-6">⚡ Live Editor</h5>
+        
+        <!-- Header Action Buttons -->
+        <div class="d-flex align-items-center gap-2">
+          <button id="header-share-btn" class="btn btn-sm btn-dark border border-secondary text-light py-1 px-2 d-flex align-items-center gap-1 shadow-sm" style="font-size: 0.75rem;" title="Share Code via URL">
+            <span>🔗</span> <span class="d-none d-sm-inline">Share</span>
+          </button>
+          <button id="header-format-btn" class="btn btn-sm btn-dark border border-secondary text-light py-1 px-2 d-flex align-items-center gap-1 shadow-sm" style="font-size: 0.75rem;" title="Format Active Editor">
+            <span>✨</span> <span class="d-none d-sm-inline">Format</span>
+          </button>
+          <button id="header-download-btn" class="btn btn-sm btn-info py-1 px-2 d-flex align-items-center gap-1 shadow-sm text-dark fw-semibold" style="font-size: 0.75rem;" title="Download Project">
+            <span>💾</span> <span class="d-none d-sm-inline">Export</span>
+          </button>
+          <button class="btn btn-sm btn-dark border border-secondary text-light py-1 px-2 shadow-sm" type="button" data-bs-toggle="offcanvas" data-bs-target="#settingsOffcanvas" aria-controls="settingsOffcanvas" title="Settings" style="font-size: 0.75rem;">
+            ⚙️
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="container-fluid py-2 px-3 d-flex flex-column flex-grow-1 overflow-hidden" style="height: calc(100vh - 50px); height: calc(100dvh - 50px);">
+      <div id="workspace-row" class="w-100 h-100 d-flex flex-column position-relative">
+        
+        <!-- 1. Input Editors Section -->
+        <div id="editor-section" class="w-100 d-flex flex-column" style="height: 48%;">
+          <div class="card h-100 w-100 d-flex flex-column shadow-sm rounded-bottom-0 border-0">
+            <div class="card-header text-bg-dark flex-shrink-0 py-1">
+              <ul class="nav nav-pills card-header-pills flex-nowrap" id="sandboxTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link active py-1 px-2" id="html-tab" data-bs-toggle="tab" data-bs-target="#html-pane" type="button" role="tab" style="font-size: 0.85rem;">🌐 HTML</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link py-1 px-2" id="css-tab" data-bs-toggle="tab" data-bs-target="#css-pane" type="button" role="tab" style="font-size: 0.85rem;">🎨 CSS</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link py-1 px-2" id="js-tab" data-bs-toggle="tab" data-bs-target="#js-pane" type="button" role="tab" style="font-size: 0.85rem;">⚡ JavaScript</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link py-1 px-2" id="console-tab" data-bs-toggle="tab" data-bs-target="#console-pane" type="button" role="tab" style="font-size: 0.85rem;">>_ Logs</button>
+                </li>
+              </ul>
+            </div>
+            <div class="card-body p-0 flex-grow-1 overflow-hidden w-100">
+              <div class="tab-content h-100 w-100 bg-dark" id="sandboxTabContent">
+                <div class="tab-pane fade show active h-100 w-100" id="html-pane" role="tabpanel"><textarea id="html-code" placeholder="Write HTML here..."></textarea></div>
+                <div class="tab-pane fade h-100 w-100" id="css-pane" role="tabpanel"><textarea id="css-code" placeholder="Write CSS here..."></textarea></div>
+                <div class="tab-pane fade h-100 w-100" id="js-pane" role="tabpanel"><textarea id="js-code" placeholder="Write JavaScript here..."></textarea></div>
+                
+                <!-- Console Pane -->
+                <div class="tab-pane fade h-100 w-100 d-flex flex-column" id="console-pane" role="tabpanel">
+                  <div class="bg-dark px-3 py-1 border-bottom border-secondary d-flex justify-content-between align-items-center flex-shrink-0" style="font-size: 0.75rem;">
+                    <span class="text-secondary">// Console Output</span>
+                    <button id="console-clear-btn" class="btn btn-sm btn-outline-secondary text-light py-0 px-2" style="font-size: 0.7rem;">Clear 🗑️</button>
+                  </div>
+                  <div id="js-console" class="flex-grow-1 w-100 bg-black text-light p-3 font-monospace overflow-auto" style="font-size: 0.85rem;">
+                    <span class="text-secondary">// Console logs and errors will appear here...</span>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Drag Splitter Handle -->
+        <div id="drag-splitter" class="w-100">
+          <div class="splitter-bar"></div>
+        </div>
+
+        <!-- 2. Preview Window Section -->
+        <div id="preview-section" class="w-100 d-flex flex-column pb-1" style="height: 48%;">
+          <div class="window h-100 w-100 d-flex flex-column bg-light shadow-sm">
+            <div class="toolbar-row flex-shrink-0">
+              <div class="column left">
+                <span class="dot red"></span>
+                <span class="dot yellow"></span>
+                <span class="dot green"></span>
+              </div>
+              <div class="column middle">
+                <input type="text" value="http://localhost:8158/index.html" readonly tabindex="-1" />
+              </div>
+              <div class="column right" id="hamburger-btn" title="Swap Layout Position">
+                <div class="float-end" style="pointer-events: none;">
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                </div>
+              </div>
+            </div>
+            <div class="content flex-grow-1 h-100 w-100">
+              <iframe id="output" class="output h-100 w-100"></iframe>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+
+    <!-- Settings Offcanvas Drawer -->
+    <div class="offcanvas offcanvas-end text-bg-dark" tabindex="-1" id="settingsOffcanvas" aria-labelledby="settingsOffcanvasLabel">
+      <div class="offcanvas-header border-bottom border-secondary">
+        <h5 class="offcanvas-title fs-5 fw-bold text-light" id="settingsOffcanvasLabel">Settings</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+      </div>
+      <div class="offcanvas-body d-flex flex-column gap-3 py-3" style="font-size: 0.9rem;">
+        
+        <!-- Section 1: Editor Setting -->
+        <div class="p-3 bg-dark border border-secondary border-opacity-50 rounded-3 shadow-sm">
+          <h6 class="text-light fs-6 mb-3 border-bottom border-secondary pb-2 fw-semibold">Editor Setting</h6>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="text-light">Word Wrap</span>
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch" id="wordWrapToggle" checked>
+            </div>
+          </div>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="text-light">Line Number</span>
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch" id="lineNumToggle" checked>
+            </div>
+          </div>
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="text-light">Font Ligatures</span>
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch" id="ligaturesToggle" checked>
+            </div>
+          </div>
+        </div>
+
+        <!-- COLOR CONVERTER CARD WITH INPUT FIELD -->
+        <div class="p-3 bg-dark border border-secondary border-opacity-50 rounded-3 shadow-sm">
+          <h6 class="text-light fs-6 mb-2 border-bottom border-secondary pb-2 fw-semibold">🎨 Color Converter</h6>
+          <p class="text-secondary mb-2" style="font-size: 0.78rem;">Cursor-based color grabber or manual insert:</p>
+          
+          <!-- Color Insert Text Input Field -->
+          <div class="mb-2">
+            <input type="text" id="colorInsertInput" class="form-control form-control-sm bg-secondary text-light border-0 shadow-none" placeholder="e.g. #343a40 or rgb(52,58,64)" style="font-size: 0.8rem; pointer-events: auto;" />
+          </div>
+
+          <!-- RGB, HEX, HSL Buttons -->
+          <div class="d-flex gap-2">
+            <button id="color-rgb-btn" class="btn btn-sm btn-outline-info flex-grow-1 fw-semibold py-1" style="font-size: 0.8rem;">RGB</button>
+            <button id="color-hex-btn" class="btn btn-sm btn-outline-warning flex-grow-1 fw-semibold py-1" style="font-size: 0.8rem;">HEX</button>
+            <button id="color-hsl-btn" class="btn btn-sm btn-outline-success flex-grow-1 fw-semibold py-1" style="font-size: 0.8rem;">HSL</button>
+          </div>
+        </div>
+
+        <!-- Section 2: Appearance & Frameworks -->
+        <div class="p-3 bg-dark border border-secondary border-opacity-50 rounded-3 shadow-sm">
+          <h6 class="text-light fs-6 mb-3 border-bottom border-secondary pb-2 fw-semibold">Appearance</h6>
+          
+          <div class="mb-3">
+            <label class="form-label text-light mb-1" style="font-size: 0.85rem;">CSS Framework</label>
+            <div class="dropdown">
+              <button class="btn btn-sm btn-secondary dropdown-toggle w-100 text-start d-flex justify-content-between align-items-center bg-secondary text-light border-0 py-1 px-2" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 0.8rem;">
+                <span id="currentFrameworkLabel" class="text-truncate">None (Vanilla CSS)</span>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-dark shadow w-100" style="font-size: 0.8rem;">
+                <li><a class="dropdown-item framework-option" href="#" data-framework="none" data-label="None (Vanilla CSS)">None (Vanilla CSS)</a></li>
+                <li><a class="dropdown-item framework-option" href="#" data-framework="bootstrap" data-label="Bootstrap 5.3">Bootstrap 5.3</a></li>
+                <li><a class="dropdown-item framework-option" href="#" data-framework="tailwind" data-label="Tailwind CSS">Tailwind CSS</a></li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label text-light mb-1" style="font-size: 0.85rem;">Editor Theme</label>
+              <div class="dropdown">
+                <button class="btn btn-sm btn-secondary dropdown-toggle w-100 text-start d-flex justify-content-between align-items-center bg-secondary text-light border-0 py-1 px-2" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 0.8rem;">
+                  <span id="currentThemeLabel" class="text-truncate">Toggle Themes</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-dark shadow" style="font-size: 0.8rem; min-width: 150px;">
+                  <li><a class="dropdown-item theme-option" href="#" data-theme="dracula">Dracula (Dark)</a></li>
+                  <li><a class="dropdown-item theme-option" href="#" data-theme="monokai">Monokai</a></li>
+                  <li><a class="dropdown-item theme-option" href="#" data-theme="default">Default (Light)</a></li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="col-6">
+              <label class="form-label text-light mb-1" style="font-size: 0.85rem;">Font Family</label>
+              <div class="dropdown">
+                <button class="btn btn-sm btn-secondary dropdown-toggle w-100 text-start d-flex justify-content-between align-items-center bg-secondary text-light border-0 py-1 px-2" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 0.8rem;">
+                  <span id="currentFontLabel" class="text-truncate">Change Fonts</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow" style="font-size: 0.8rem; min-width: 210px;">
+                  <li><a class="dropdown-item font-option" href="#" data-font="'Source Code Pro', monospace" data-style="normal" data-label="Pro IDE">Pro IDE</a></li>
+                  <li><a class="dropdown-item font-option" href="#" data-font="'Fira Code', monospace" data-style="normal" data-label="VS Code Style">VS Code Style</a></li>
+                  <li><a class="dropdown-item font-option" href="#" data-font="'JetBrains Mono', monospace" data-style="normal" data-label="JetBrains IDE">JetBrains IDE</a></li>
+                  <li><hr class="dropdown-divider border-secondary"></li>
+                  <li><a class="dropdown-item font-option" href="#" data-font="'Google Sans Code', monospace" data-style="normal" data-label="Google Sans Code">Google Sans Code</a></li>
+                  <li><a class="dropdown-item font-option" href="#" data-font="'Google Sans Code', monospace" data-style="italic" data-label="Google Sans Code (Italic)">Google Sans Code (Italic)</a></li>
+                  <li><a class="dropdown-item font-option" href="#" data-font="'Fira Code', monospace" data-style="normal" data-label="Fira Code">Fira Code</a></li>
+                  <li><a class="dropdown-item font-option" href="#" data-font="'JetBrains Mono', monospace" data-style="normal" data-label="JetBrains Mono">JetBrains Mono</a></li>
+                  <li><a class="dropdown-item font-option" href="#" data-font="'Ubuntu Mono', monospace" data-style="normal" data-label="Ubuntu Mono">Ubuntu Mono</a></li>
+                  <li><a class="dropdown-item font-option" href="#" data-font="'Roboto Mono', monospace" data-style="normal" data-label="Roboto Mono">Roboto Mono</a></li>
+                  <li><a class="dropdown-item font-option" href="#" data-font="monospace" data-style="normal" data-label="System Mono">System Mono</a></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-1">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="text-light" style="font-size: 0.85rem;">Select Font Size</span>
+              <span class="badge bg-secondary px-2 py-1" id="fontSizeBadge" style="font-size: 0.8rem;">14px</span>
+            </div>
+            <input type="range" class="form-range" id="fontSizeRange" min="10" max="24" step="1" value="14">
+          </div>
+        </div>
+
+        <!-- Section 3: More Settings -->
+        <div class="p-3 bg-dark border border-secondary border-opacity-50 rounded-3 shadow-sm">
+          <h6 class="text-light fs-6 mb-3 border-bottom border-secondary pb-2 fw-semibold">More Settings</h6>
+          <div class="row g-2">
+            <div class="col-6">
+              <button id="menu-export-btn" class="btn btn-success btn-sm w-100 d-flex align-items-center justify-content-center gap-1 py-2 fw-semibold" style="font-size: 0.8rem;">
+                <span>Save As</span> 💾
+              </button>
+            </div>
+            <div class="col-6">
+              <button id="menu-view-source-btn" class="btn btn-warning btn-sm w-100 d-flex align-items-center justify-content-center gap-1 py-2 fw-semibold text-dark" style="font-size: 0.8rem;">
+                <span>View Source</span> 👁️
+              </button>
+            </div>
+            <div class="col-6">
+              <button id="menu-format-btn" class="btn btn-primary btn-sm w-100 d-flex align-items-center justify-content-center gap-1 py-2 fw-semibold" style="font-size: 0.8rem;">
+                <span>Format</span> ✨
+              </button>
+            </div>
+            <div class="col-6">
+              <button id="menu-reset-btn" class="btn btn-secondary btn-sm w-100 d-flex align-items-center justify-content-center gap-1 py-2 fw-semibold text-light" style="font-size: 0.8rem;">
+                <span>Reset</span> 🔄
+              </button>
+            </div>
+            <div class="col-6">
+              <button id="menu-json-export-btn" class="btn btn-info btn-sm w-100 d-flex align-items-center justify-content-center gap-1 py-2 fw-semibold text-dark" style="font-size: 0.8rem;" title="Backup Project as JSON">
+                <span>Backup JSON</span> 📦
+              </button>
+            </div>
+            <div class="col-6">
+              <button id="menu-json-import-btn" class="btn btn-outline-warning btn-sm w-100 d-flex align-items-center justify-content-center gap-1 py-2 fw-semibold" style="font-size: 0.8rem;" title="Restore Project from JSON">
+                <span>Restore JSON</span> 📂
+              </button>
+              <input type="file" id="jsonFileInput" accept=".json" class="d-none">
+            </div>
+            <div class="col-12">
+              <button id="clear-storage-btn" class="btn btn-danger btn-sm w-100 d-flex align-items-center justify-content-center gap-1 py-2 fw-semibold" style="font-size: 0.8rem;">
+                <span>Reset All Data</span> 🗑️
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-auto text-center text-secondary py-2" style="font-size: 0.75rem;">
+          Mobile Sandbox IDE • Built with CodeMirror & Bootstrap
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
