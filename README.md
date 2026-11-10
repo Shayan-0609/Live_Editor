@@ -42,8 +42,8 @@ A lightweight, multi-tab web code sandbox application designed specifically for 
 ## 📸 Screenshots
 
 <p align="center">
-  <img src="assets/Screenshots/Dark.jpg" width="45%">
-  <img src="assets/Screenshots/Light.jpg" width="45%">
+  <img src="assets/screenshots/Dark.jpg" width="45%">
+  <img src="assets/screenshots/Light.jpg" width="45%">
 </p>
 
 ---
