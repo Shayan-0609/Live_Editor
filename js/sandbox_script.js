@@ -112,6 +112,382 @@ document.addEventListener("DOMContentLoaded", () => {
     tabSize: 2
   });
 
+  // --- ROBUST LIVE COLOR SWATCH WIDGET INJECTOR ---
+  function enableColorSwatches(cm) {
+    let widgets = [];
+
+    function updateSwatches() {
+      widgets.forEach(w => w.clear());
+      widgets = [];
+
+      const colorRegex = /(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\))/g;
+      const doc = cm.getDoc();
+      const lineCount = doc.lineCount();
+
+      for (let i = 0; i < lineCount; i++) {
+        const text = doc.getLine(i);
+        let match;
+        colorRegex.lastIndex = 0;
+        while ((match = colorRegex.exec(text)) !== null) {
+          const colorStr = match[0];
+          const endCh = match.index + colorStr.length;
+
+          try {
+            const span = document.createElement("span");
+            span.className = "cm-inline-color-box";
+            span.style.backgroundColor = colorStr;
+
+            const bookmark = doc.setBookmark({ line: i, ch: endCh }, { widget: span, insertLeft: false });
+            widgets.push(bookmark);
+          } catch (err) {}
+        }
+      }
+    }
+
+    let timer = null;
+    cm.on("change", () => {
+      clearTimeout(timer);
+      timer = setTimeout(updateSwatches, 300);
+    });
+
+    updateSwatches();
+  }
+
+  enableColorSwatches(window.htmlEditor);
+  enableColorSwatches(window.cssEditor);
+  enableColorSwatches(window.jsEditor);
+
+  // --- ADVANCED EMMET PARSER ENGINE WITH SECURE ATTRIBUTE & TEXT TOKENIZER ---
+  function splitByOperator(str, op) {
+    let result = [];
+    let current = "";
+    let depth = 0;
+    let inAttr = false;
+    let inContent = false;
+    
+    for (let i = 0; i < str.length; i++) {
+      let char = str[i];
+      if (char === '[') inAttr = true;
+      if (char === ']') inAttr = false;
+      if (char === '{') inContent = true;
+      if (char === '}') inContent = false;
+      
+      if (!inAttr && !inContent) {
+        if (char === '(') depth++;
+        else if (char === ')') depth--;
+        else if (depth === 0 && char === op) {
+          result.push(current);
+          current = "";
+          continue;
+        }
+      }
+      current += char;
+    }
+    result.push(current);
+    return result;
+  }
+
+  function parseSingleTagNode(seg) {
+    let tagName = "div";
+    let id = "";
+    let classes = [];
+    let attrs = [];
+    let textContent = "";
+
+    let contentMatch = seg.match(/\{([^}]+)\}/);
+    if (contentMatch) {
+      textContent = contentMatch[1];
+      seg = seg.replace(contentMatch[0], '');
+    }
+
+    let tagMatch = seg.match(/^([a-zA-Z0-9\-]+)/);
+    if (tagMatch && !seg.startsWith('.') && !seg.startsWith('#') && !seg.startsWith('[')) {
+      tagName = tagMatch[1];
+      seg = seg.substring(tagMatch[0].length);
+    }
+
+    let i = 0;
+    while (i < seg.length) {
+      let char = seg[i];
+      if (char === '#') {
+        i++;
+        let start = i;
+        while (i < seg.length && seg[i] !== '.' && seg[i] !== '#' && seg[i] !== '[') {
+          i++;
+        }
+        id = seg.substring(start, i);
+      } else if (char === '.') {
+        i++;
+        let start = i;
+        while (i < seg.length && seg[i] !== '.' && seg[i] !== '#' && seg[i] !== '[') {
+          i++;
+        }
+        classes.push(seg.substring(start, i));
+      } else if (char === '[') {
+        i++;
+        let start = i;
+        let bracketDepth = 1;
+        let inQuote = false;
+        let quoteChar = '';
+        while (i < seg.length && bracketDepth > 0) {
+          let c = seg[i];
+          if ((c === '"' || c === "'") && (i === 0 || seg[i - 1] !== '\\')) {
+            if (!inQuote) {
+              inQuote = true;
+              quoteChar = c;
+            } else if (quoteChar === c) {
+              inQuote = false;
+            }
+          }
+          if (!inQuote) {
+            if (c === '[') bracketDepth++;
+            if (c === ']') bracketDepth--;
+          }
+          if (bracketDepth > 0) i++;
+        }
+        attrs.push(seg.substring(start, i));
+        i++;
+      } else {
+        i++;
+      }
+    }
+
+    const selfClosing = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr'];
+    let isSelf = selfClosing.includes(tagName.toLowerCase());
+
+    return {
+      tagName,
+      id,
+      classes,
+      attrs,
+      textContent,
+      isSelfClosing: isSelf,
+      children: []
+    };
+  }
+
+  function parseEmmet(str) {
+    str = str.trim();
+    if (!str) return [];
+
+    if (str.startsWith('(') && str.endsWith(')')) {
+      let depth = 0;
+      let wraps = true;
+      for (let i = 0; i < str.length - 1; i++) {
+        if (str[i] === '(') depth++;
+        else if (str[i] === ')') depth--;
+        if (depth === 0) {
+          wraps = false;
+          break;
+        }
+      }
+      if (wraps) {
+        return parseEmmet(str.substring(1, str.length - 1));
+      }
+    }
+
+    let siblings = splitByOperator(str, '+');
+    if (siblings.length > 1) {
+      let nodes = [];
+      for (let sib of siblings) {
+        nodes = nodes.concat(parseEmmet(sib));
+      }
+      return nodes;
+    }
+
+    let children = splitByOperator(str, '>');
+    if (children.length > 1) {
+      let parentNodes = parseEmmet(children[0]);
+      let childNodes = parseEmmet(children.slice(1).join('>'));
+      if (parentNodes.length > 0) {
+        let root = parentNodes[0];
+        let curr = root;
+        while (curr.children && curr.children.length > 0) {
+          curr = curr.children[curr.children.length - 1];
+        }
+        curr.children = childNodes;
+        return parentNodes;
+      }
+    }
+
+    let multIndex = -1;
+    let depth = 0;
+    let inAttr = false;
+    let inContent = false;
+    for (let i = str.length - 1; i >= 0; i--) {
+      let char = str[i];
+      if (char === ']') inAttr = true;
+      if (char === '[') inAttr = false;
+      if (char === '}') inContent = true;
+      if (char === '{') inContent = false;
+      
+      if (!inAttr && !inContent) {
+        if (char === ')') depth++;
+        else if (char === '(') depth--;
+        else if (depth === 0 && char === '*') {
+          multIndex = i;
+          break;
+        }
+      }
+    }
+
+    if (multIndex !== -1) {
+      let left = str.substring(0, multIndex);
+      let count = parseInt(str.substring(multIndex + 1), 10);
+      let parsedNodes = parseEmmet(left);
+      let repeated = [];
+      for (let c = 0; c < count; c++) {
+        let clone = JSON.parse(JSON.stringify(parsedNodes));
+        substituteIndex(clone, c + 1);
+        repeated = repeated.concat(clone);
+      }
+      return repeated;
+    }
+
+    if (str.startsWith('(') && str.endsWith(')')) {
+      return parseEmmet(str.substring(1, str.length - 1));
+    }
+
+    return [parseSingleTagNode(str)];
+  }
+
+  function substituteIndex(nodes, idx) {
+    for (let node of nodes) {
+      if (node.textContent) {
+        node.textContent = node.textContent.replace(/\$/g, idx);
+      }
+      if (node.id) {
+        node.id = node.id.replace(/\$/g, idx);
+      }
+      node.classes = node.classes.map(cls => cls.replace(/\$/g, idx));
+      node.attrs = node.attrs.map(attr => attr.replace(/\$/g, idx));
+      if (node.children && node.children.length > 0) {
+        substituteIndex(node.children, idx);
+      }
+    }
+  }
+
+  function renderNodesToHTML(nodes, baseIndent = "", indentLevel = 0) {
+    let html = "";
+    let indent = baseIndent + "  ".repeat(indentLevel);
+    const selfClosing = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr'];
+
+    for (let node of nodes) {
+      let attrStr = "";
+      if (node.id) attrStr += ` id="${node.id}"`;
+      if (node.classes.length > 0) attrStr += ` class="${node.classes.join(' ')}"`;
+      for (let attr of node.attrs) {
+        attrStr += ` ${attr}`;
+      }
+
+      if (selfClosing.includes(node.tagName.toLowerCase())) {
+        html += `${indent}<${node.tagName}${attrStr}>\n`;
+      } else if (node.children && node.children.length > 0) {
+        html += `${indent}<${node.tagName}${attrStr}>\n`;
+        html += renderNodesToHTML(node.children, baseIndent, indentLevel + 1);
+        html += `${indent}</${node.tagName}>\n`;
+      } else if (node.textContent !== "") {
+        html += `${indent}<${node.tagName}${attrStr}>${node.textContent}</${node.tagName}>\n`;
+      } else {
+        html += `${indent}<${node.tagName}${attrStr}>\n${indent}  \n${indent}</${node.tagName}>\n`;
+      }
+    }
+    return html;
+  }
+
+  function expandEmmet(abbr, baseIndent = "") {
+    abbr = abbr.trim();
+    if (!abbr) return "";
+    let nodes = parseEmmet(abbr);
+    return renderNodesToHTML(nodes, baseIndent, 0).trimEnd();
+  }
+
+  function setupSmartEditorFeatures(cm, mode) {
+    cm.setOption("extraKeys", {
+      "Tab": function(cm) {
+        if (mode === "htmlmixed" || mode === "html") {
+          const cursor = cm.getCursor();
+          const line = cm.getLine(cursor.line);
+          const lineBefore = line.substring(0, cursor.ch);
+          
+          const match = lineBefore.match(/([a-zA-Z0-9\-\.\#\[\]\=\"\:\;\s\*\+\(\)\>\{\}\$\s]+)+$/);
+          if (match) {
+            let abbr = match[0].trim();
+            let startCh = cursor.ch - abbr.length;
+            
+            const indentMatch = line.match(/^([ \t]*)/);
+            let baseIndent = indentMatch ? indentMatch[1] : '';
+
+            let expanded = expandEmmet(abbr, baseIndent);
+
+            if (expanded) {
+              cm.replaceRange(expanded, {line: cursor.line, ch: startCh}, cursor);
+              
+              if (!expanded.includes('</') || expanded.split('\n').length === 3) {
+                const lines = expanded.split('\n');
+                if (lines.length === 3) {
+                  cm.setCursor({ line: cursor.line + 1, ch: lines[1].length });
+                }
+              }
+              return;
+            }
+          }
+        }
+
+        if (cm.somethingSelected()) {
+          cm.indentSelection("add");
+        } else {
+          cm.replaceRange("  ", cm.getCursor(), null, "+input");
+        }
+      },
+      "Enter": function(cm) {
+        const cursor = cm.getCursor();
+        const line = cm.getLine(cursor.line);
+        const lineBefore = line.substring(0, cursor.ch);
+        const lineAfter = line.substring(cursor.ch);
+
+        const openTagMatch = lineBefore.match(/<([a-zA-Z0-9\-]+)(?:\s+[^>]*)?>$/);
+        if (openTagMatch) {
+          const tagName = openTagMatch[1].toLowerCase();
+          const selfClosingTags = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr'];
+          
+          if (!selfClosingTags.includes(tagName)) {
+            const expectedClose = `</${tagName}>`;
+            if (!lineAfter.trim() || lineAfter.trim() === expectedClose) {
+              const indentMatch = line.match(/^([ \t]*)/);
+              const baseIndent = indentMatch ? indentMatch[1] : '';
+              const innerIndent = baseIndent + "  ";
+              
+              const replacement = `\n${innerIndent}\n${baseIndent}${expectedClose}`;
+              cm.replaceRange(replacement, cursor, { line: cursor.line, ch: line.length });
+              cm.setCursor({ line: cursor.line + 1, ch: innerIndent.length });
+              return;
+            }
+          }
+        }
+
+        const match = lineBefore.match(/^([ \t]*)/);
+        let indent = match ? match[1] : '';
+        
+        const trimmed = lineBefore.trim();
+        if (
+          trimmed.endsWith('{') || 
+          trimmed.endsWith('(') || 
+          trimmed.endsWith('[') ||
+          (trimmed.startsWith('<') && !trimmed.endsWith('/>') && !trimmed.startsWith('</') && !trimmed.endsWith('>'))
+        ) {
+          indent += "  ";
+        }
+        
+        cm.replaceRange("\n" + indent, cursor, null, "+input");
+      }
+    });
+  }
+
+  setupSmartEditorFeatures(window.htmlEditor, "htmlmixed");
+  setupSmartEditorFeatures(window.cssEditor, "css");
+  setupSmartEditorFeatures(window.jsEditor, "javascript");
+
   setTimeout(() => {
     const [fontFamily, fontStyle] = savedFontSetting.split('|');
     const isLigSupported = supportsLigatures(fontFamily);
@@ -260,7 +636,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // --- PRECISE COLOR CONVERTER LOGIC (RGB, HEX, HSL) ---
   function parseColorString(str) {
     str = str.trim().toLowerCase();
-    // 1. Hex
     if (str.startsWith('#')) {
       let hex = str.substring(1);
       if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
@@ -269,12 +644,10 @@ document.addEventListener("DOMContentLoaded", () => {
         return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
       }
     }
-    // 2. RGB / RGBA
     const rgbMatch = str.match(/^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/i);
     if (rgbMatch) {
       return { r: parseFloat(rgbMatch[1]), g: parseFloat(rgbMatch[2]), b: parseFloat(rgbMatch[3]) };
     }
-    // 3. HSL / HSLA
     const hslMatch = str.match(/^hsla?\(\s*([\d.]+)\s*,\s*([\d.]+)%?\s*,\s*([\d.]+)%?/i);
     if (hslMatch) {
       let h = parseFloat(hslMatch[1]);
@@ -346,7 +719,6 @@ document.addEventListener("DOMContentLoaded", () => {
     let lineNum, startCh, endCh;
 
     if (manualColorVal) {
-      // If user typed color in the settings input box
       rgbObj = parseColorString(manualColorVal);
       if (!rgbObj) {
         alert("❌ Could not parse color from input: " + manualColorVal);
@@ -354,11 +726,9 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       const cursor = editor.getCursor();
       lineNum = cursor.line;
-      const line = editor.getLine(lineNum);
       startCh = cursor.ch;
       endCh = cursor.ch;
     } else {
-      // Fallback: Cursor-based color detection in active editor
       const cursor = editor.getCursor();
       lineNum = cursor.line;
       const line = editor.getLine(lineNum);
@@ -419,11 +789,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (newColorStr) {
       editor.replaceRange(newColorStr, { line: lineNum, ch: startCh }, { line: lineNum, ch: endCh });
       editor.setCursor({ line: lineNum, ch: startCh + newColorStr.length });
-      if (colorInput) colorInput.value = ""; // Clear input after successful insert/update
+      if (colorInput) colorInput.value = "";
     }
   }
 
-  // Bind color converter buttons
   const colorRgbBtn = document.getElementById("color-rgb-btn");
   const colorHexBtn = document.getElementById("color-hex-btn");
   const colorHslBtn = document.getElementById("color-hsl-btn");
@@ -659,7 +1028,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (menuJsonExportBtn) {
     menuJsonExportBtn.addEventListener("click", () => {
       const backupData = {
-        version: "1.0",
+        version: "1.1.0",
         timestamp: new Date().toISOString(),
         html: window.htmlEditor.getValue(),
         css: window.cssEditor.getValue(),
@@ -781,7 +1150,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Console Loggers
+  // --- Console Loggers with Clean Flexbox Alignment & Timestamp ---
   window.appendLog = function(type, message) {
     const consoleDiv = document.getElementById("js-console");
     if (!consoleDiv) return;
@@ -789,17 +1158,59 @@ document.addEventListener("DOMContentLoaded", () => {
     if (placeholder) placeholder.remove();
 
     const logItem = document.createElement("div");
-    logItem.className = "mb-2 border-bottom border-secondary border-opacity-25 pb-1 font-monospace";
+    logItem.className = "console-log-item font-monospace border-bottom border-secondary border-opacity-25 pb-2";
+    
     let badgeClass = "bg-secondary text-light";
     let prefix = "LOG";
     if (type === 'error') { badgeClass = "bg-danger text-white"; prefix = "ERROR"; }
     else if (type === 'warn') { badgeClass = "bg-warning text-dark"; prefix = "WARN"; }
     else if (type === 'info') { badgeClass = "bg-info text-dark"; prefix = "INFO"; }
 
+    const now = new Date();
+    const timeStr = [
+      String(now.getHours()).padStart(2, '0'),
+      String(now.getMinutes()).padStart(2, '0'),
+      String(now.getSeconds()).padStart(2, '0')
+    ].join(':');
+
+    let targetLine = null;
+    const lineMatch = message.match(/\(Line:\s*(\d+)\)/i);
+    if (lineMatch) {
+      targetLine = parseInt(lineMatch[1], 10) - 1;
+    }
+
     logItem.innerHTML = `
-      <span class="badge ${badgeClass} px-1 py-0" style="font-size: 0.7rem;">${prefix}</span>
-      <span class="text-light ms-1" style="white-space: pre-wrap; word-break: break-all;">${escapeHtml(message)}</span>
+      <div class="console-content-line">
+        <span class="badge ${badgeClass} px-1 py-0 flex-shrink-0" style="font-size: 0.7rem; margin-top: 2px;">${prefix}</span>
+        <span class="text-light flex-grow-1" style="white-space: pre-wrap; word-break: break-all; font-size: 0.8rem;">${escapeHtml(message)}</span>
+        ${targetLine !== null ? '<span class="text-info flex-shrink-0 ms-1" style="font-size: 0.7rem;" title="Jump to Line">📍</span>' : ''}
+      </div>
+      <div class="console-timestamp">[${timeStr}]</div>
     `;
+
+    if (targetLine !== null) {
+      logItem.addEventListener("click", () => {
+        const jsTabBtn = document.getElementById("js-tab");
+        if (jsTabBtn) {
+          const bsTab = new bootstrap.Tab(jsTabBtn);
+          bsTab.show();
+        }
+
+        setTimeout(() => {
+          if (window.jsEditor) {
+            window.jsEditor.setCursor({ line: targetLine, ch: 0 });
+            window.jsEditor.scrollIntoView({ line: targetLine, ch: 0 }, 100);
+            window.jsEditor.focus();
+
+            const lineHandle = window.jsEditor.addLineClass(targetLine, "background", "cm-error-line-highlight");
+            setTimeout(() => {
+              window.jsEditor.removeLineClass(lineHandle, "background", "cm-error-line-highlight");
+            }, 2000);
+          }
+        }, 150);
+      });
+    }
+
     consoleDiv.appendChild(logItem);
     consoleDiv.scrollTop = consoleDiv.scrollHeight;
   };
@@ -878,7 +1289,7 @@ document.addEventListener("DOMContentLoaded", () => {
           try {
             ${jsCode}
           } catch (err) {
-            console.error(err.message);
+            console.error(err.message + ' (Line: 1)');
           }
         </script>
       </body>

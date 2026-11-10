@@ -184,3 +184,53 @@ input[type="text"] {
 .CodeMirror-gutters {
   border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
+
+/* Inline Color Swatch Pill */
+.cm-inline-color-box {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  vertical-align: middle;
+  margin: 0 4px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Console Log Row Layout */
+.console-log-item {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 8px;
+  background-color: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.console-log-item:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.console-content-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  width: 100%;
+}
+
+.console-timestamp {
+  display: flex;
+  justify-content: flex-end;
+  font-size: 0.65rem;
+  color: #9ca3af;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+  width: 100%;
+}
+
+/* CodeMirror line highlight effect when clicked from console */
+.cm-error-line-highlight {
+  background-color: rgba(239, 68, 68, 0.25) !important;
+}
