@@ -161,7 +161,7 @@ document.addEventListener("DOMContentLoaded", () => {
     tabSize: 2
   });
 
-  // --- EMMET & CUSTOM SNIPPET INTEGRATED ENGINE ---
+  // --- EMMET & CUSTOM SNIPPET INTEGRATED ENGINE (Fixed for $) ---
   function splitByOperator(str, op) {
     let result = [];
     let current = "";
@@ -191,7 +191,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return result;
   }
 
-  function parseSingleTagNode(seg) {
+  function parseSingleTagNode(seg, index = 0) {
     let tagName = "div";
     let id = "";
     let classes = [];
@@ -200,7 +200,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let contentMatch = seg.match(/\{([^}]*)\}/);
     if (contentMatch) {
-      textContent = contentMatch[1];
+      let rawText = contentMatch[1];
+      textContent = rawText.replace(/\$/g, index + 1);
       seg = seg.replace(contentMatch[0], '');
     }
 
@@ -277,8 +278,9 @@ document.addEventListener("DOMContentLoaded", () => {
     let siblings = splitByOperator(str, '+');
     if (siblings.length > 1) {
       let nodes = [];
-      for (let sib of siblings) {
-        nodes = nodes.concat(parseEmmet(sib));
+      for (let i = 0; i < siblings.length; i++) {
+        let parsed = parseEmmet(siblings[i]);
+        nodes = nodes.concat(parsed);
       }
       return nodes;
     }
@@ -298,7 +300,19 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    return [parseSingleTagNode(str)];
+    let multMatch = str.match(/^(.+)\*(\d+)$/);
+    if (multMatch) {
+      let baseStr = multMatch[1];
+      let count = parseInt(multMatch[2], 10);
+      let nodes = [];
+      for (let idx = 0; idx < count; idx++) {
+        let singleNode = parseSingleTagNode(baseStr, idx);
+        nodes.push(singleNode);
+      }
+      return nodes;
+    }
+
+    return [parseSingleTagNode(str, 0)];
   }
 
   function renderNodesToHTML(nodes, baseIndent = "", indentLevel = 0) {
@@ -1367,7 +1381,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   window.htmlEditor.on("change", triggerDebouncedUpdate);
-  window.cssEditor.on("change", triggerDebourcedUpdate);
+  window.cssEditor.on("change", triggerDebouncedUpdate);
   window.jsEditor.on("change", triggerDebouncedUpdate);
 
   updatePreview();
