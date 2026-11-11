@@ -20,7 +20,7 @@
     <!-- Google Fonts for Coding -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Google+Sans+Code:ital,wght@0,400;0,500;1,400;1,500&family=JetBrains+Mono:wght@400;500&family=Roboto+Mono:wght@400;500&family=Source+Code+Pro:wght@400;500&family=Ubuntu+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600;700&family=Google+Sans+Code:ital,wght@0,300;0,400;0,500;0,700;1,400&family=JetBrains+Mono:wght@300;400;500;600;700&family=Roboto+Mono:wght@300;400;500;600;700&family=Source+Code+Pro:wght@300;400;500;600;700&family=Ubuntu+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
 
     <!-- CodeMirror 5 Core -->
     <link rel="stylesheet" href="CodeMirror-5/lib/codemirror.css" />
@@ -191,12 +191,10 @@
           <h6 class="text-light fs-6 mb-2 border-bottom border-secondary pb-2 fw-semibold">🎨 Color Converter</h6>
           <p class="text-secondary mb-2" style="font-size: 0.78rem;">Cursor-based color grabber or manual insert:</p>
           
-          <!-- Color Insert Text Input Field -->
           <div class="mb-2">
             <input type="text" id="colorInsertInput" class="form-control form-control-sm bg-secondary text-light border-0 shadow-none" placeholder="e.g. #343a40 or rgb(52,58,64)" style="font-size: 0.8rem; pointer-events: auto;" />
           </div>
 
-          <!-- RGB, HEX, HSL Buttons -->
           <div class="d-flex gap-2">
             <button id="color-rgb-btn" class="btn btn-sm btn-outline-info flex-grow-1 fw-semibold py-1" style="font-size: 0.8rem;">RGB</button>
             <button id="color-hex-btn" class="btn btn-sm btn-outline-warning flex-grow-1 fw-semibold py-1" style="font-size: 0.8rem;">HEX</button>
@@ -260,12 +258,36 @@
             </div>
           </div>
 
-          <div class="mb-1">
+          <div class="mb-3">
             <div class="d-flex justify-content-between align-items-center mb-2">
               <span class="text-light" style="font-size: 0.85rem;">Select Font Size</span>
               <span class="badge bg-secondary px-2 py-1" id="fontSizeBadge" style="font-size: 0.8rem;">14px</span>
             </div>
             <input type="range" class="form-range" id="fontSizeRange" min="10" max="24" step="1" value="14">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label text-light mb-1" style="font-size: 0.85rem;">Font Weight</label>
+            <div class="dropdown">
+              <button class="btn btn-sm btn-secondary dropdown-toggle w-100 text-start d-flex justify-content-between align-items-center bg-secondary text-light border-0 py-1 px-2" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 0.8rem;">
+                <span id="currentFontWeightLabel" class="text-truncate">Normal (400)</span>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-dark shadow w-100" style="font-size: 0.8rem;">
+                <li><a class="dropdown-item fontweight-option" href="#" data-weight="300" data-label="Light (300)">Light (300)</a></li>
+                <li><a class="dropdown-item fontweight-option" href="#" data-weight="400" data-label="Normal (400)">Normal (400)</a></li>
+                <li><a class="dropdown-item fontweight-option" href="#" data-weight="500" data-label="Medium (500)">Medium (500)</a></li>
+                <li><a class="dropdown-item fontweight-option" href="#" data-weight="600" data-label="Semi-Bold (600)">Semi-Bold (600)</a></li>
+                <li><a class="dropdown-item fontweight-option" href="#" data-weight="700" data-label="Bold (700)">Bold (700)</a></li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="mb-1">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="text-light" style="font-size: 0.85rem;">Line Height</span>
+              <span class="badge bg-secondary px-2 py-1" id="lineHeightBadge" style="font-size: 0.8rem;">1.4</span>
+            </div>
+            <input type="range" class="form-range" id="lineHeightRange" min="1.0" max="2.0" step="0.1" value="1.4">
           </div>
         </div>
 
@@ -304,7 +326,26 @@
               </button>
               <input type="file" id="jsonFileInput" accept=".json" class="d-none">
             </div>
-            <div class="col-12">
+            
+            <!-- Custom Snippets Editor & Save Buttons -->
+            <div class="col-6">
+              <button id="menu-snippets-edit-btn" class="btn btn-outline-info btn-sm w-100 d-flex align-items-center justify-content-center gap-1 py-2 fw-semibold" style="font-size: 0.8rem;" title="Open Snippets JSON in JS Editor">
+                <span>📝 Open Snippets</span>
+              </button>
+            </div>
+            <div class="col-6">
+              <button id="menu-snippets-save-btn" class="btn btn-outline-warning btn-sm w-100 d-flex align-items-center justify-content-center gap-1 py-2 fw-semibold" style="font-size: 0.8rem;" title="Save Snippets from JS Editor">
+                <span>💾 Save Snippets</span>
+              </button>
+            </div>
+            <div class="col-6">
+              <button id="menu-snippets-import-btn" class="btn btn-outline-success btn-sm w-100 d-flex align-items-center justify-content-center gap-1 py-2 fw-semibold" style="font-size: 0.8rem;" title="Upload JSON Snippets File">
+                <span>📂 Upload Snippets</span>
+              </button>
+              <input type="file" id="snippetsFileInput" accept=".json" class="d-none">
+            </div>
+
+            <div class="col-6">
               <button id="clear-storage-btn" class="btn btn-danger btn-sm w-100 d-flex align-items-center justify-content-center gap-1 py-2 fw-semibold" style="font-size: 0.8rem;">
                 <span>Reset All Data</span> 🗑️
               </button>

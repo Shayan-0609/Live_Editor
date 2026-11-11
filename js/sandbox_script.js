@@ -20,6 +20,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const savedFontSize = localStorage.getItem("sandbox_font_size") || "14";
   const savedFontSetting = localStorage.getItem("sandbox_font_setting") || "monospace|normal";
   const savedFontLabel = localStorage.getItem("sandbox_font_label") || "Change Fonts";
+  const savedFontWeight = localStorage.getItem("sandbox_font_weight") || "400";
+  const savedFontWeightLabel = localStorage.getItem("sandbox_font_weight_label") || "Normal (400)";
+  const savedLineHeight = localStorage.getItem("sandbox_line_height") || "1.4";
   const savedWordWrap = localStorage.getItem("sandbox_word_wrap") !== null ? localStorage.getItem("sandbox_word_wrap") === "true" : true;
   const savedLineNums = localStorage.getItem("sandbox_line_nums") !== null ? localStorage.getItem("sandbox_line_nums") === "true" : true;
   const savedLigatures = localStorage.getItem("sandbox_ligatures") !== null ? localStorage.getItem("sandbox_ligatures") === "true" : true;
@@ -27,6 +30,38 @@ document.addEventListener("DOMContentLoaded", () => {
   const savedThemeLabel = localStorage.getItem("sandbox_theme_label") || "Toggle Themes";
   const savedFramework = localStorage.getItem("sandbox_framework") || "none";
   const savedFrameworkLabel = localStorage.getItem("sandbox_framework_label") || "None (Vanilla CSS)";
+
+  // --- DEFAULT CUSTOM SNIPPETS (JSON format) ---
+  const defaultSnippets = {
+    "js": {
+      "clg": "console.log($1);",
+      "fnc": "function $1($2) {\n  $3\n}",
+      "arr": "const $1 = ($2) => {\n  $3\n};",
+      "foe": "$1.forEach(item => {\n  $2\n});"
+    },
+    "html": {
+      "t": "<tag>$1</tag>",
+      "ul": "<ul>\n  <li>$1</li>\n</ul>",
+      "btn": "<button class=\"btn btn-$1\">$2</button>"
+    },
+    "css": {
+      "flex": "display: flex;\nalign-items: center;\njustify-content: center;",
+      "pos": "position: absolute;\ntop: 0;\nleft: 0;"
+    }
+  };
+
+  // Load user snippets or fallback to default
+  let customSnippets = defaultSnippets;
+  try {
+    const savedSnippets = localStorage.getItem("sandbox_custom_snippets");
+    if (savedSnippets) {
+      customSnippets = JSON.parse(savedSnippets);
+    } else {
+      localStorage.setItem("sandbox_custom_snippets", JSON.stringify(defaultSnippets, null, 2));
+    }
+  } catch (err) {
+    console.error("Error loading custom snippets:", err);
+  }
 
   // Sync UI controls with saved settings on startup
   const fontSizeRange = document.getElementById("fontSizeRange");
@@ -36,8 +71,18 @@ document.addEventListener("DOMContentLoaded", () => {
     fontSizeBadge.textContent = savedFontSize + "px";
   }
 
+  const lineHeightRange = document.getElementById("lineHeightRange");
+  const lineHeightBadge = document.getElementById("lineHeightBadge");
+  if (lineHeightRange && lineHeightBadge) {
+    lineHeightRange.value = savedLineHeight;
+    lineHeightBadge.textContent = savedLineHeight;
+  }
+
   const currentFontLabel = document.getElementById("currentFontLabel");
   if (currentFontLabel) currentFontLabel.textContent = savedFontLabel;
+
+  const currentFontWeightLabel = document.getElementById("currentFontWeightLabel");
+  if (currentFontWeightLabel) currentFontWeightLabel.textContent = savedFontWeightLabel;
 
   const currentThemeLabel = document.getElementById("currentThemeLabel");
   if (currentThemeLabel) currentThemeLabel.textContent = savedThemeLabel;
@@ -60,6 +105,10 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll('.font-option').forEach(item => {
     const setting = `${item.getAttribute('data-font')}|${item.getAttribute('data-style')}`;
     if (setting === savedFontSetting) item.classList.add('active');
+  });
+
+  document.querySelectorAll('.fontweight-option').forEach(item => {
+    if (item.getAttribute('data-weight') === savedFontWeight) item.classList.add('active');
   });
 
   document.querySelectorAll('.theme-option').forEach(item => {
@@ -112,52 +161,7 @@ document.addEventListener("DOMContentLoaded", () => {
     tabSize: 2
   });
 
-  // --- ROBUST LIVE COLOR SWATCH WIDGET INJECTOR ---
-  function enableColorSwatches(cm) {
-    let widgets = [];
-
-    function updateSwatches() {
-      widgets.forEach(w => w.clear());
-      widgets = [];
-
-      const colorRegex = /(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\))/g;
-      const doc = cm.getDoc();
-      const lineCount = doc.lineCount();
-
-      for (let i = 0; i < lineCount; i++) {
-        const text = doc.getLine(i);
-        let match;
-        colorRegex.lastIndex = 0;
-        while ((match = colorRegex.exec(text)) !== null) {
-          const colorStr = match[0];
-          const endCh = match.index + colorStr.length;
-
-          try {
-            const span = document.createElement("span");
-            span.className = "cm-inline-color-box";
-            span.style.backgroundColor = colorStr;
-
-            const bookmark = doc.setBookmark({ line: i, ch: endCh }, { widget: span, insertLeft: false });
-            widgets.push(bookmark);
-          } catch (err) {}
-        }
-      }
-    }
-
-    let timer = null;
-    cm.on("change", () => {
-      clearTimeout(timer);
-      timer = setTimeout(updateSwatches, 300);
-    });
-
-    updateSwatches();
-  }
-
-  enableColorSwatches(window.htmlEditor);
-  enableColorSwatches(window.cssEditor);
-  enableColorSwatches(window.jsEditor);
-
-  // --- ADVANCED EMMET PARSER ENGINE WITH SECURE ATTRIBUTE & TEXT TOKENIZER ---
+  // --- EMMET & CUSTOM SNIPPET INTEGRATED ENGINE ---
   function splitByOperator(str, op) {
     let result = [];
     let current = "";
@@ -194,7 +198,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let attrs = [];
     let textContent = "";
 
-    let contentMatch = seg.match(/\{([^}]+)\}/);
+    let contentMatch = seg.match(/\{([^}]*)\}/);
     if (contentMatch) {
       textContent = contentMatch[1];
       seg = seg.replace(contentMatch[0], '');
@@ -270,22 +274,6 @@ document.addEventListener("DOMContentLoaded", () => {
     str = str.trim();
     if (!str) return [];
 
-    if (str.startsWith('(') && str.endsWith(')')) {
-      let depth = 0;
-      let wraps = true;
-      for (let i = 0; i < str.length - 1; i++) {
-        if (str[i] === '(') depth++;
-        else if (str[i] === ')') depth--;
-        if (depth === 0) {
-          wraps = false;
-          break;
-        }
-      }
-      if (wraps) {
-        return parseEmmet(str.substring(1, str.length - 1));
-      }
-    }
-
     let siblings = splitByOperator(str, '+');
     if (siblings.length > 1) {
       let nodes = [];
@@ -310,61 +298,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    let multIndex = -1;
-    let depth = 0;
-    let inAttr = false;
-    let inContent = false;
-    for (let i = str.length - 1; i >= 0; i--) {
-      let char = str[i];
-      if (char === ']') inAttr = true;
-      if (char === '[') inAttr = false;
-      if (char === '}') inContent = true;
-      if (char === '{') inContent = false;
-      
-      if (!inAttr && !inContent) {
-        if (char === ')') depth++;
-        else if (char === '(') depth--;
-        else if (depth === 0 && char === '*') {
-          multIndex = i;
-          break;
-        }
-      }
-    }
-
-    if (multIndex !== -1) {
-      let left = str.substring(0, multIndex);
-      let count = parseInt(str.substring(multIndex + 1), 10);
-      let parsedNodes = parseEmmet(left);
-      let repeated = [];
-      for (let c = 0; c < count; c++) {
-        let clone = JSON.parse(JSON.stringify(parsedNodes));
-        substituteIndex(clone, c + 1);
-        repeated = repeated.concat(clone);
-      }
-      return repeated;
-    }
-
-    if (str.startsWith('(') && str.endsWith(')')) {
-      return parseEmmet(str.substring(1, str.length - 1));
-    }
-
     return [parseSingleTagNode(str)];
-  }
-
-  function substituteIndex(nodes, idx) {
-    for (let node of nodes) {
-      if (node.textContent) {
-        node.textContent = node.textContent.replace(/\$/g, idx);
-      }
-      if (node.id) {
-        node.id = node.id.replace(/\$/g, idx);
-      }
-      node.classes = node.classes.map(cls => cls.replace(/\$/g, idx));
-      node.attrs = node.attrs.map(attr => attr.replace(/\$/g, idx));
-      if (node.children && node.children.length > 0) {
-        substituteIndex(node.children, idx);
-      }
-    }
   }
 
   function renderNodesToHTML(nodes, baseIndent = "", indentLevel = 0) {
@@ -389,7 +323,7 @@ document.addEventListener("DOMContentLoaded", () => {
       } else if (node.textContent !== "") {
         html += `${indent}<${node.tagName}${attrStr}>${node.textContent}</${node.tagName}>\n`;
       } else {
-        html += `${indent}<${node.tagName}${attrStr}>\n${indent}  \n${indent}</${node.tagName}>\n`;
+        html += `${indent}<${node.tagName}${attrStr}></${node.tagName}>\n`;
       }
     }
     return html;
@@ -405,30 +339,41 @@ document.addEventListener("DOMContentLoaded", () => {
   function setupSmartEditorFeatures(cm, mode) {
     cm.setOption("extraKeys", {
       "Tab": function(cm) {
-        if (mode === "htmlmixed" || mode === "html") {
-          const cursor = cm.getCursor();
-          const line = cm.getLine(cursor.line);
-          const lineBefore = line.substring(0, cursor.ch);
+        const cursor = cm.getCursor();
+        const line = cm.getLine(cursor.line);
+        const lineBefore = line.substring(0, cursor.ch);
+        const words = lineBefore.trim().split(/\s+/);
+        const lastWord = words[words.length - 1] || "";
+
+        // 1. Check Custom Snippets first based on mode (js, html, css)
+        let langKey = "html";
+        if (mode === "javascript") langKey = "js";
+        else if (mode === "css") langKey = "css";
+
+        if (customSnippets[langKey] && customSnippets[langKey][lastWord]) {
+          let snippetTpl = customSnippets[langKey][lastWord];
+          const indentMatch = line.match(/^([ \t]*)/);
+          let baseIndent = indentMatch ? indentMatch[1] : '';
           
-          const match = lineBefore.match(/([a-zA-Z0-9\-\.\#\[\]\=\"\:\;\s\*\+\(\)\>\{\}\$\s]+)+$/);
+          let formattedSnippet = snippetTpl.split('\n').map((l, idx) => idx === 0 ? l : baseIndent + l).join('\n');
+          let startCh = cursor.ch - lastWord.length;
+
+          cm.replaceRange(formattedSnippet, {line: cursor.line, ch: startCh}, cursor);
+          return;
+        }
+
+        // 2. Fallback to Emmet expansion for HTML/XML
+        if (mode === "htmlmixed" || mode === "html") {
+          const match = lineBefore.match(/([a-zA-Z0-9\-\.\#\[\]\=\"\:\;\*\+\(\)\>\{\},\s\$]+)+$/);
           if (match) {
             let abbr = match[0].trim();
             let startCh = cursor.ch - abbr.length;
-            
             const indentMatch = line.match(/^([ \t]*)/);
             let baseIndent = indentMatch ? indentMatch[1] : '';
 
             let expanded = expandEmmet(abbr, baseIndent);
-
             if (expanded) {
               cm.replaceRange(expanded, {line: cursor.line, ch: startCh}, cursor);
-              
-              if (!expanded.includes('</') || expanded.split('\n').length === 3) {
-                const lines = expanded.split('\n');
-                if (lines.length === 3) {
-                  cm.setCursor({ line: cursor.line + 1, ch: lines[1].length });
-                }
-              }
               return;
             }
           }
@@ -439,47 +384,6 @@ document.addEventListener("DOMContentLoaded", () => {
         } else {
           cm.replaceRange("  ", cm.getCursor(), null, "+input");
         }
-      },
-      "Enter": function(cm) {
-        const cursor = cm.getCursor();
-        const line = cm.getLine(cursor.line);
-        const lineBefore = line.substring(0, cursor.ch);
-        const lineAfter = line.substring(cursor.ch);
-
-        const openTagMatch = lineBefore.match(/<([a-zA-Z0-9\-]+)(?:\s+[^>]*)?>$/);
-        if (openTagMatch) {
-          const tagName = openTagMatch[1].toLowerCase();
-          const selfClosingTags = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr'];
-          
-          if (!selfClosingTags.includes(tagName)) {
-            const expectedClose = `</${tagName}>`;
-            if (!lineAfter.trim() || lineAfter.trim() === expectedClose) {
-              const indentMatch = line.match(/^([ \t]*)/);
-              const baseIndent = indentMatch ? indentMatch[1] : '';
-              const innerIndent = baseIndent + "  ";
-              
-              const replacement = `\n${innerIndent}\n${baseIndent}${expectedClose}`;
-              cm.replaceRange(replacement, cursor, { line: cursor.line, ch: line.length });
-              cm.setCursor({ line: cursor.line + 1, ch: innerIndent.length });
-              return;
-            }
-          }
-        }
-
-        const match = lineBefore.match(/^([ \t]*)/);
-        let indent = match ? match[1] : '';
-        
-        const trimmed = lineBefore.trim();
-        if (
-          trimmed.endsWith('{') || 
-          trimmed.endsWith('(') || 
-          trimmed.endsWith('[') ||
-          (trimmed.startsWith('<') && !trimmed.endsWith('/>') && !trimmed.startsWith('</') && !trimmed.endsWith('>'))
-        ) {
-          indent += "  ";
-        }
-        
-        cm.replaceRange("\n" + indent, cursor, null, "+input");
       }
     });
   }
@@ -487,6 +391,68 @@ document.addEventListener("DOMContentLoaded", () => {
   setupSmartEditorFeatures(window.htmlEditor, "htmlmixed");
   setupSmartEditorFeatures(window.cssEditor, "css");
   setupSmartEditorFeatures(window.jsEditor, "javascript");
+
+  // --- CUSTOM SNIPPETS DIRECT JS EDITOR INTEGRATION ---
+  const editSnippetsBtn = document.getElementById("menu-snippets-edit-btn");
+  const saveSnippetsBtn = document.getElementById("menu-snippets-save-btn");
+
+  if (editSnippetsBtn) {
+    editSnippetsBtn.addEventListener("click", () => {
+      let currentJsonStr = JSON.stringify(customSnippets, null, 2);
+      
+      const jsTabBtn = document.getElementById("js-tab");
+      if (jsTabBtn) {
+        const bsTab = new bootstrap.Tab(jsTabBtn);
+        bsTab.show();
+      }
+
+      if (window.jsEditor) {
+        window.jsEditor.setValue(currentJsonStr);
+        window.jsEditor.setOption("mode", "javascript");
+        window.jsEditor.refresh();
+      }
+
+      alert("📝 Custom snippets JSON loaded into JavaScript Editor! Edit your snippets there and click 'Save Snippets'.");
+    });
+  }
+
+  if (saveSnippetsBtn) {
+    saveSnippetsBtn.addEventListener("click", () => {
+      if (!window.jsEditor) return;
+      let editorContent = window.jsEditor.getValue().trim();
+
+      try {
+        let parsed = JSON.parse(editorContent);
+        customSnippets = parsed;
+        localStorage.setItem("sandbox_custom_snippets", JSON.stringify(parsed, null, 2));
+        alert("✅ Custom snippets saved successfully from JS Editor!");
+      } catch (e) {
+        alert("❌ Invalid JSON format in JS Editor! Please check your brackets/quotes.");
+      }
+    });
+  }
+
+  const uploadSnippetsBtn = document.getElementById("menu-snippets-import-btn");
+  const snippetsFileInput = document.getElementById("snippetsFileInput");
+  if (uploadSnippetsBtn && snippetsFileInput) {
+    uploadSnippetsBtn.addEventListener("click", () => snippetsFileInput.click());
+    snippetsFileInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          let parsed = JSON.parse(event.target.result);
+          customSnippets = parsed;
+          localStorage.setItem("sandbox_custom_snippets", JSON.stringify(parsed, null, 2));
+          alert("📂 Custom snippets file uploaded and applied successfully!");
+        } catch (err) {
+          alert("❌ Invalid JSON snippet file!");
+        }
+      };
+      reader.readAsText(file);
+    });
+  }
 
   setTimeout(() => {
     const [fontFamily, fontStyle] = savedFontSetting.split('|');
@@ -511,6 +477,8 @@ document.addEventListener("DOMContentLoaded", () => {
       el.style.fontSize = savedFontSize + 'px';
       el.style.setProperty('font-family', fontFamily, 'important');
       el.style.setProperty('font-style', fontStyle, 'important');
+      el.style.setProperty('font-weight', savedFontWeight, 'important');
+      el.style.setProperty('line-height', savedLineHeight, 'important');
       el.style.setProperty('font-variant-ligatures', ligaturesVal, 'important');
     });
     if (window.htmlEditor) window.htmlEditor.refresh();
@@ -573,22 +541,68 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 50);
   });
 
-  // 1.3 Auto-close Brackets
+  // 1.3 Clean Bracket Auto-Closing & Enter Formatter
   function enableAutoCloseBrackets(editor) {
-    let isClosing = false;
-    editor.on("change", function(cm, change) {
-      if (isClosing) return;
-      if (change.origin !== "+input" && change.origin !== "paste") return;
-      const typedChar = change.text && change.text[0];
-      const pairs = { '{': '}', '(': ')', '[': ']', '"': '"', "'": "'" };
-      if (pairs[typedChar]) {
+    editor.setOption("autoCloseBrackets", false);
+    
+    editor.on("keydown", function(cm, event) {
+      if (event.key === "Enter") {
         const cursor = cm.getCursor();
-        isClosing = true;
-        setTimeout(() => {
-          cm.replaceRange(pairs[typedChar], cursor);
-          cm.setCursor(cursor);
-          isClosing = false;
-        }, 10);
+        const line = cm.getLine(cursor.line);
+        const charBefore = line.charAt(cursor.ch - 1);
+        const charAfter = line.charAt(cursor.ch);
+
+        if (
+          (charBefore === '{' && charAfter === '}') ||
+          (charBefore === '(' && charAfter === ')') ||
+          (charBefore === '[' && charAfter === ']')
+        ) {
+          event.preventDefault();
+          const indentMatch = line.match(/^([ \t]*)/);
+          const baseIndent = indentMatch ? indentMatch[1] : '';
+          const innerIndent = baseIndent + "  ";
+
+          const replacement = `\n${innerIndent}\n${baseIndent}`;
+          cm.replaceRange(replacement, { line: cursor.line, ch: cursor.ch }, { line: cursor.line, ch: cursor.ch });
+          cm.setCursor({ line: cursor.line + 1, ch: innerIndent.length });
+          return;
+        }
+
+        const lineBefore = line.substring(0, cursor.ch);
+        const lineAfter = line.substring(cursor.ch);
+        const openTagMatch = lineBefore.match(/<([a-zA-Z0-9\-]+)(?:\s+[^>]*)?>$/);
+        if (openTagMatch) {
+          const tagName = openTagMatch[1].toLowerCase();
+          const selfClosingTags = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr'];
+          if (!selfClosingTags.includes(tagName)) {
+            const expectedClose = `</${tagName}>`;
+            if (!lineAfter.trim() || lineAfter.trim() === expectedClose) {
+              event.preventDefault();
+              const indentMatch = line.match(/^([ \t]*)/);
+              const baseIndent = indentMatch ? indentMatch[1] : '';
+              const innerIndent = baseIndent + "  ";
+              
+              const replacement = `\n${innerIndent}\n${baseIndent}${expectedClose}`;
+              cm.replaceRange(replacement, cursor, { line: cursor.line, ch: line.length });
+              cm.setCursor({ line: cursor.line + 1, ch: innerIndent.length });
+              return;
+            }
+          }
+        }
+      }
+    });
+
+    editor.on("beforeChange", function(cm, change) {
+      if (change.origin === "+input" && change.text.length === 1 && change.text[0].length === 1) {
+        const typedChar = change.text[0];
+        const pairs = { '{': '}', '(': ')', '[': ']', '"': '"', "'": "'" };
+        if (pairs[typedChar]) {
+          change.update(change.from, change.to, [typedChar + pairs[typedChar]], change.from);
+          setTimeout(() => {
+            const cur = cm.getCursor();
+            cm.setCursor({ line: cur.line, ch: cur.ch - 1 });
+          }, 1);
+        }
       }
     });
   }
@@ -604,6 +618,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (change.origin !== "+input" && change.origin !== "paste") return;
     const cursor = cm.getCursor();
     const line = cm.getLine(cursor.line);
+    
+    const braceIdx = line.lastIndexOf('{', cursor.ch);
+    const closeBraceIdx = line.indexOf('}', cursor.ch);
+    if (braceIdx !== -1 && (closeBraceIdx === -1 || cursor.ch < closeBraceIdx)) {
+      return; 
+    }
+
     const textBeforeCursor = line.substring(0, cursor.ch);
     const match = textBeforeCursor.match(/<([a-zA-Z0-9\-]+)(?:\s+[^>]*)?>$/);
     if (match) {
@@ -633,7 +654,7 @@ document.addEventListener("DOMContentLoaded", () => {
   enableAutoScroll(window.cssEditor);
   enableAutoScroll(window.jsEditor);
 
-  // --- PRECISE COLOR CONVERTER LOGIC (RGB, HEX, HSL) ---
+  // --- PRECISE COLOR CONVERTER LOGIC ---
   function parseColorString(str) {
     str = str.trim().toLowerCase();
     if (str.startsWith('#')) {
@@ -734,7 +755,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const line = editor.getLine(lineNum);
       const ch = cursor.ch;
 
-      const colorRegex = /(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\))/g;
+      const colorRegex = /#(?:[0-9a-fA-F]{3}){1,2}\b|#[0-9a-fA-F]{8}\b|rgba?\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*(?:,\s*[\d.]+\s*)?\)|hsla?\(\s*[\d.]+\s*,\s*[\d.]+(?:%|\s*),\s*[\d.]+(?:%|\s*)(?:,\s*[\d.]+\s*)?\)/g;
       let match;
       let targetMatch = null;
 
@@ -910,6 +931,20 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  if (lineHeightRange && lineHeightBadge) {
+    lineHeightRange.addEventListener("input", (e) => {
+      const val = e.target.value;
+      lineHeightBadge.textContent = val;
+      document.querySelectorAll('.CodeMirror').forEach(el => el.style.setProperty('line-height', val, 'important'));
+      localStorage.setItem("sandbox_line_height", val);
+      setTimeout(() => {
+        if (window.htmlEditor) window.htmlEditor.refresh();
+        if (window.cssEditor) window.cssEditor.refresh();
+        if (window.jsEditor) window.jsEditor.refresh();
+      }, 30);
+    });
+  }
+
   document.querySelectorAll('.font-option').forEach(item => {
     item.addEventListener('click', (e) => {
       e.preventDefault();
@@ -944,6 +979,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
       localStorage.setItem("sandbox_font_setting", `${fontFamily}|${fontStyle}`);
       localStorage.setItem("sandbox_font_label", fontLabel);
+      setTimeout(() => {
+        if (window.htmlEditor) window.htmlEditor.refresh();
+        if (window.cssEditor) window.cssEditor.refresh();
+        if (window.jsEditor) window.jsEditor.refresh();
+      }, 30);
+    });
+  });
+
+  document.querySelectorAll('.fontweight-option').forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.preventDefault();
+      document.querySelectorAll('.fontweight-option').forEach(opt => opt.classList.remove('active'));
+      item.classList.add('active');
+
+      const fontWeight = item.getAttribute('data-weight');
+      const fontWeightLabel = item.getAttribute('data-label');
+      if (currentFontWeightLabel) currentFontWeightLabel.textContent = fontWeightLabel;
+
+      document.querySelectorAll('.CodeMirror').forEach(el => {
+        el.style.setProperty('font-weight', fontWeight, 'important');
+      });
+
+      localStorage.setItem("sandbox_font_weight", fontWeight);
+      localStorage.setItem("sandbox_font_weight_label", fontWeightLabel);
       setTimeout(() => {
         if (window.htmlEditor) window.htmlEditor.refresh();
         if (window.cssEditor) window.cssEditor.refresh();
@@ -1035,6 +1094,8 @@ document.addEventListener("DOMContentLoaded", () => {
         js: window.jsEditor.getValue(),
         settings: {
           fontSize: localStorage.getItem("sandbox_font_size"),
+          fontWeight: localStorage.getItem("sandbox_font_weight"),
+          lineHeight: localStorage.getItem("sandbox_line_height"),
           fontSetting: localStorage.getItem("sandbox_font_setting"),
           fontLabel: localStorage.getItem("sandbox_font_label"),
           wordWrap: localStorage.getItem("sandbox_word_wrap"),
@@ -1074,6 +1135,8 @@ document.addEventListener("DOMContentLoaded", () => {
           if (data.js !== undefined) window.jsEditor.setValue(data.js);
           if (data.settings) {
             if (data.settings.fontSize) localStorage.setItem("sandbox_font_size", data.settings.fontSize);
+            if (data.settings.fontWeight) localStorage.setItem("sandbox_font_weight", data.settings.fontWeight);
+            if (data.settings.lineHeight) localStorage.setItem("sandbox_line_height", data.settings.lineHeight);
             if (data.settings.fontSetting) localStorage.setItem("sandbox_font_setting", data.settings.fontSetting);
             if (data.settings.fontLabel) localStorage.setItem("sandbox_font_label", data.settings.fontLabel);
             if (data.settings.wordWrap) localStorage.setItem("sandbox_word_wrap", data.settings.wordWrap);
@@ -1150,7 +1213,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // --- Console Loggers with Clean Flexbox Alignment & Timestamp ---
+  // --- Console Loggers ---
   window.appendLog = function(type, message) {
     const consoleDiv = document.getElementById("js-console");
     if (!consoleDiv) return;
@@ -1304,7 +1367,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   window.htmlEditor.on("change", triggerDebouncedUpdate);
-  window.cssEditor.on("change", triggerDebouncedUpdate);
+  window.cssEditor.on("change", triggerDebourcedUpdate);
   window.jsEditor.on("change", triggerDebouncedUpdate);
 
   updatePreview();
