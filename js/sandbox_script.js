@@ -668,7 +668,7 @@ document.addEventListener("DOMContentLoaded", () => {
   enableAutoScroll(window.cssEditor);
   enableAutoScroll(window.jsEditor);
 
-  // --- PRECISE COLOR CONVERTER LOGIC ---
+  // --- PRECISE COLOR CONVERTER LOGIC (EXACT ROUND-TRIP PREVENTS DRIFT) ---
   function parseColorString(str) {
     str = str.trim().toLowerCase();
     if (str.startsWith('#')) {
@@ -694,8 +694,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function rgbToHexObj(r, g, b) {
-    return "#" + [Math.round(r), Math.round(g), Math.round(b)].map(x => {
-      const hex = Math.max(0, Math.min(255, x)).toString(16);
+    return "#" + [r, g, b].map(x => {
+      const hex = Math.max(0, Math.min(255, Math.round(x))).toString(16);
       return hex.length === 1 ? "0" + hex : hex;
     }).join('');
   }
@@ -703,10 +703,9 @@ document.addEventListener("DOMContentLoaded", () => {
   function rgbToHslObj(r, g, b) {
     r /= 255; g /= 255; b /= 255;
     const max = Math.max(r, g, b), min = Math.min(r, g, b);
-    let h, s, l = (max + min) / 2;
-    if (max === min) {
-      h = s = 0;
-    } else {
+    let h = 0, s = 0, l = (max + min) / 2;
+
+    if (max !== min) {
       const d = max - min;
       s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
       switch (max) {
@@ -720,21 +719,26 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function hslToRgbObj(h, s, l) {
-    s /= 100; l /= 100;
-    let c = (1 - Math.abs(2 * l - 1)) * s,
-        x = c * (1 - Math.abs((h / 60) % 2 - 1)),
-        m = l - c/2,
-        r = 0, g = 0, b = 0;
+    h = (h % 360 + 360) % 360;
+    s /= 100;
+    l /= 100;
+
+    const c = (1 - Math.abs(2 * l - 1)) * s;
+    const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+    const m = l - c / 2;
+    let r = 0, g = 0, b = 0;
+
     if (0 <= h && h < 60) { r = c; g = x; b = 0; }
     else if (60 <= h && h < 120) { r = x; g = c; b = 0; }
     else if (120 <= h && h < 180) { r = 0; g = c; b = x; }
     else if (180 <= h && h < 240) { r = 0; g = x; b = c; }
     else if (240 <= h && h < 300) { r = x; g = 0; b = c; }
     else if (300 <= h && h < 360) { r = c; g = 0; b = x; }
+
     return {
-      r: (r + m) * 255,
-      g: (g + m) * 255,
-      b: (b + m) * 255
+      r: Math.round((r + m) * 255),
+      g: Math.round((g + m) * 255),
+      b: Math.round((b + m) * 255)
     };
   }
 
@@ -811,14 +815,22 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    const r = Math.round(rgbObj.r);
+    const g = Math.round(rgbObj.g);
+    const b = Math.round(rgbObj.b);
+
     let newColorStr = "";
     if (targetFormat === 'hex') {
-      newColorStr = rgbToHexObj(rgbObj.r, rgbObj.g, rgbObj.b);
+      newColorStr = rgbToHexObj(r, g, b);
     } else if (targetFormat === 'rgb') {
-      newColorStr = `rgb(${Math.round(rgbObj.r)}, ${Math.round(rgbObj.g)}, ${Math.round(rgbObj.b)})`;
+      newColorStr = `rgb(${r}, ${g}, ${b})`;
     } else if (targetFormat === 'hsl') {
-      const hsl = rgbToHslObj(rgbObj.r, rgbObj.g, rgbObj.b);
-      newColorStr = `hsl(${Math.round(hsl.h)}, ${Number(hsl.s.toFixed(1))}%, ${Number(hsl.l.toFixed(1))}%)`;
+      const hsl = rgbToHslObj(r, g, b);
+      // Retain float precisions formatted nicely to 1 decimal place if needed, or precise integer formatting
+      const hStr = Math.round(hsl.h);
+      const sStr = Number(hsl.s.toFixed(1));
+      const lStr = Number(hsl.l.toFixed(1));
+      newColorStr = `hsl(${hStr}, ${sStr}%, ${lStr}%)`;
     }
 
     if (newColorStr) {
@@ -835,6 +847,42 @@ document.addEventListener("DOMContentLoaded", () => {
   if (colorRgbBtn) colorRgbBtn.addEventListener("click", () => convertColorAtCursor('rgb'));
   if (colorHexBtn) colorHexBtn.addEventListener("click", () => convertColorAtCursor('hex'));
   if (colorHslBtn) colorHslBtn.addEventListener("click", () => convertColorAtCursor('hsl'));
+  
+    // --- DYNAMIC COLOR INPUT BACKGROUND, TEXT & BORDER READABILITY LOGIC ---
+  const colorInput = document.getElementById("colorInsertInput");
+  if (colorInput) {
+    colorInput.addEventListener("input", (e) => {
+      const val = e.target.value.trim();
+      const rgb = parseColorString(val);
+
+      if (rgb) {
+        // 1. Background set karo using '!important'
+        colorInput.style.setProperty('background-color', val, 'important');
+
+        // 2. YIQ formula se calculate karo ki color dark hai ya light
+        const brightness = (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000;
+
+        // 3. Text, Border aur Placeholder color dynamically set karo
+        if (brightness < 128) {
+          // Dark Background -> Light text & Light translucent border
+          colorInput.style.setProperty('color', '#ffffff', 'important');
+          colorInput.style.setProperty('border', '1px solid rgba(255, 255, 255, 0.5)', 'important');
+          colorInput.style.setProperty('--bs-placeholder-color', 'rgba(255, 255, 255, 0.6)', 'important');
+        } else {
+          // Light Background -> Dark text & Dark translucent border
+          colorInput.style.setProperty('color', '#000000', 'important');
+          colorInput.style.setProperty('border', '1px solid rgba(0, 0, 0, 0.4)', 'important');
+          colorInput.style.setProperty('--bs-placeholder-color', 'rgba(0, 0, 0, 0.6)', 'important');
+        }
+      } else {
+        // Agar invalid color ho ya empty ho, toh default styling wapas laao
+        colorInput.style.removeProperty('background-color');
+        colorInput.style.removeProperty('color');
+        colorInput.style.removeProperty('border');
+        colorInput.style.removeProperty('--bs-placeholder-color');
+      }
+    });
+  }
 
   // --- Formatter & Share ---
   function formatCurrentEditor() {

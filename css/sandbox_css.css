@@ -222,3 +222,8 @@ input[type="text"] {
 .cm-error-line-highlight {
   background-color: rgba(239, 68, 68, 0.25) !important;
 }
+
+/* Color Converter UI */
+#colorInsertInput {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
