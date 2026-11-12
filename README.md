@@ -4,7 +4,7 @@
 
 # ⚡ Mobile Sandbox IDE (Live Editor)
 
-![Version: 1.2.0](https://img.shields.io/badge/version-v1.2.0-blue)
+![Version: 1.2.1](https://img.shields.io/badge/version-v1.2.1-blue)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A lightweight, multi-tab web code sandbox application designed specifically for mobile and desktop developers. Built using native JavaScript, CodeMirror 5, and Bootstrap 5.
