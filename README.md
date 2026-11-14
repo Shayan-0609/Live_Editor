@@ -4,7 +4,7 @@
 
 # ⚡ Mobile Sandbox IDE (Live Editor)
 
-![Version: 1.2.1](https://img.shields.io/badge/version-v1.2.1-blue)
+![Version: 1.3.0](https://img.shields.io/badge/version-v1.3.0-blue)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A lightweight, multi-tab web code sandbox application designed specifically for mobile and desktop developers. Built using native JavaScript, CodeMirror 5, and Bootstrap 5.
@@ -25,14 +25,15 @@ A lightweight, multi-tab web code sandbox application designed specifically for 
 - **Auto Bracket & Tag Closing:** Automatic pair completion for brackets (`{}`, `()`, `[]`) and auto-closing HTML tags with clean indentation on `Enter`.
 
 ### 🎨 Color & Appearance Tools
-- **Cursor Color Converter:** Convert color values (HEX ↔ RGB ↔ HSL) instantly at your editor cursor position or manually via the settings panel.
+- **Cursor Color Converter & Smart UI:** Convert color values (HEX ↔ RGB ↔ HSL) instantly at your editor cursor position or via manual input.
+- **Adaptive Field-Colors & Live Value Display:** The color input field dynamically updates its background, text, and border colors based on the color value's brightness (YIQ formula), ensuring instant visibility and readability.
 - **Font & Theme Customization:** Switch between coding fonts (*Fira Code, JetBrains Mono, Google Sans Code, Source Code Pro*), adjust font sizes, weights (300–700), line heights, font ligatures, and themes (*Dracula, Monokai*).
 - **Instant CSS Framework Injection:** Toggle seamlessly between Vanilla CSS, Bootstrap 5.3, and Tailwind CSS without manual setup.
 
 ### ⚡ Live Preview & Debugging
 - **Real-Time Rendering:** Instant iframe preview powered by `srcdoc` debounced for zero performance lag.
 - **Smart Console Log & Line Navigation:** Integrated console for `log`, `warn`, `error`, and `info`. Click on any logged error line to jump straight to that line in the JS editor.
-- **Draggable Splitter & Layout Swap:** Drag-to-resize editor/preview height ratio dynamically or flip layout position using the window toolbar toggle.
+- **Draggable Splitter & Auto-Saved Layout Position:** Drag-to-resize editor/preview height ratio dynamically or flip layout position using the window toolbar toggle. The chosen layout position (editor/preview orientation) auto-saves across page refreshes while resetting splitter size gracefully.
 
 ### 💾 Backup, Export & Sharing
 - **URL Base64 Code Sharing:** Share complete HTML/CSS/JS state instantly via lightweight URL hash links.

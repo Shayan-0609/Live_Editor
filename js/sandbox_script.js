@@ -30,6 +30,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const savedThemeLabel = localStorage.getItem("sandbox_theme_label") || "Toggle Themes";
   const savedFramework = localStorage.getItem("sandbox_framework") || "none";
   const savedFrameworkLabel = localStorage.getItem("sandbox_framework_label") || "None (Vanilla CSS)";
+  const savedPreviewOnTop = localStorage.getItem("sandbox_preview_on_top") === "true";
 
   // --- DEFAULT CUSTOM SNIPPETS (JSON format) ---
   const defaultSnippets = {
@@ -510,6 +511,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const previewSection = document.getElementById("preview-section");
   const workspaceRow = document.getElementById("workspace-row");
 
+  // Apply saved layout state (Preview on top / Editor down) on startup
+  if (savedPreviewOnTop && workspaceRow) {
+    workspaceRow.classList.add("preview-on-top");
+  }
+
   let isDragging = false;
   splitter.addEventListener("pointerdown", (e) => {
     isDragging = true;
@@ -544,16 +550,21 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 50);
   });
 
-  // 1.2 Hamburger Layout Swap
+  // 1.2 Hamburger Layout Swap (Auto-saved state)
   const hamburgerBtn = document.getElementById("hamburger-btn");
-  hamburgerBtn.addEventListener("click", () => {
-    workspaceRow.classList.toggle("preview-on-top");
-    setTimeout(() => {
-      if (window.htmlEditor) window.htmlEditor.refresh();
-      if (window.cssEditor) window.cssEditor.refresh();
-      if (window.jsEditor) window.jsEditor.refresh();
-    }, 50);
-  });
+  if (hamburgerBtn && workspaceRow) {
+    hamburgerBtn.addEventListener("click", () => {
+      workspaceRow.classList.toggle("preview-on-top");
+      const isPreviewOnTop = workspaceRow.classList.contains("preview-on-top");
+      localStorage.setItem("sandbox_preview_on_top", isPreviewOnTop);
+
+      setTimeout(() => {
+        if (window.htmlEditor) window.htmlEditor.refresh();
+        if (window.cssEditor) window.cssEditor.refresh();
+        if (window.jsEditor) window.jsEditor.refresh();
+      }, 50);
+    });
+  }
 
   // 1.3 Clean Bracket Auto-Closing & Enter Formatter
   function enableAutoCloseBrackets(editor) {
@@ -668,12 +679,16 @@ document.addEventListener("DOMContentLoaded", () => {
   enableAutoScroll(window.cssEditor);
   enableAutoScroll(window.jsEditor);
 
-  // --- PRECISE COLOR CONVERTER LOGIC (EXACT ROUND-TRIP PREVENTS DRIFT) ---
+  // --- PRECISE COLOR CONVERTER LOGIC (ZERO ROUND-TRIP DRIFT) ---
   function parseColorString(str) {
     str = str.trim().toLowerCase();
     if (str.startsWith('#')) {
       let hex = str.substring(1);
-      if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+      if (hex.length === 3 || hex.length === 4) {
+        hex = hex.substring(0, 3).split('').map(c => c + c).join('');
+      } else if (hex.length === 8) {
+        hex = hex.substring(0, 6);
+      }
       if (hex.length >= 6) {
         const num = parseInt(hex.substring(0, 6), 16);
         return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
@@ -742,6 +757,12 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
+  const colorInput = document.getElementById("colorInsertInput");
+  const colorRgbBtn = document.getElementById("color-rgb-btn");
+  const colorHexBtn = document.getElementById("color-hex-btn");
+  const colorHslBtn = document.getElementById("color-hsl-btn");
+  const colorClearBtn = document.getElementById("color-clear-btn");
+
   function convertColorAtCursor(targetFormat) {
     const activeTab = document.querySelector('#sandboxTabs .nav-link.active');
     if (!activeTab) return;
@@ -751,32 +772,26 @@ document.addEventListener("DOMContentLoaded", () => {
     else if (activeTab.id === 'js-tab') editor = window.jsEditor;
     if (!editor) return;
 
-    const colorInput = document.getElementById("colorInsertInput");
     const manualColorVal = colorInput ? colorInput.value.trim() : "";
 
     let rgbObj = null;
     let lineNum, startCh, endCh;
+    const cursor = editor.getCursor();
+    lineNum = cursor.line;
+    const line = editor.getLine(lineNum);
+    const ch = cursor.ch;
 
+    const colorRegex = /#(?:[0-9a-fA-F]{3}){1,2}\b|#[0-9a-fA-F]{8}\b|rgba?\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*(?:,\s*[\d.]+\s*)?\)|hsla?\(\s*[\d.]+\s*,\s*[\d.]+(?:%|\s*),\s*[\d.]+(?:%|\s*)(?:,\s*[\d.]+\s*)?\)/g;
+    let match;
+    let targetMatch = null;
+
+    // 1. Prioritize manual input field value if present
     if (manualColorVal) {
       rgbObj = parseColorString(manualColorVal);
-      if (!rgbObj) {
-        alert("❌ Could not parse color from input: " + manualColorVal);
-        return;
-      }
-      const cursor = editor.getCursor();
-      lineNum = cursor.line;
-      startCh = cursor.ch;
-      endCh = cursor.ch;
-    } else {
-      const cursor = editor.getCursor();
-      lineNum = cursor.line;
-      const line = editor.getLine(lineNum);
-      const ch = cursor.ch;
+    }
 
-      const colorRegex = /#(?:[0-9a-fA-F]{3}){1,2}\b|#[0-9a-fA-F]{8}\b|rgba?\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*(?:,\s*[\d.]+\s*)?\)|hsla?\(\s*[\d.]+\s*,\s*[\d.]+(?:%|\s*),\s*[\d.]+(?:%|\s*)(?:,\s*[\d.]+\s*)?\)/g;
-      let match;
-      let targetMatch = null;
-
+    // 2. Otherwise inspect cursor position in active editor
+    if (!rgbObj) {
       while ((match = colorRegex.exec(line)) !== null) {
         const start = match.index;
         const end = start + match[0].length;
@@ -793,25 +808,39 @@ document.addEventListener("DOMContentLoaded", () => {
           const start = match.index;
           const end = start + match[0].length;
           let dist = (ch < start) ? start - ch : (ch > end) ? ch - end : 0;
-          if (dist < minDistance && dist <= 3) {
+          if (dist < minDistance && dist <= 4) {
             minDistance = dist;
             targetMatch = { text: match[0], start, end };
           }
         }
       }
 
-      if (!targetMatch) {
-        alert("⚠️ Please either type a color in the input field or place your cursor inside a color code in the editor!");
-        return;
+      if (targetMatch) {
+        rgbObj = parseColorString(targetMatch.text);
+        startCh = targetMatch.start;
+        endCh = targetMatch.end;
       }
-
-      rgbObj = parseColorString(targetMatch.text);
-      startCh = targetMatch.start;
-      endCh = targetMatch.end;
+    } else {
+      // Check if cursor is on an existing color code to replace it cleanly
+      while ((match = colorRegex.exec(line)) !== null) {
+        const start = match.index;
+        const end = start + match[0].length;
+        if (ch >= start && ch <= end) {
+          targetMatch = { text: match[0], start, end };
+          break;
+        }
+      }
+      if (targetMatch) {
+        startCh = targetMatch.start;
+        endCh = targetMatch.end;
+      } else {
+        startCh = ch;
+        endCh = ch;
+      }
     }
 
     if (!rgbObj) {
-      alert("❌ Invalid color value!");
+      alert("⚠️ Please either type a valid color in the input field or place your cursor inside/near a color code in the editor!");
       return;
     }
 
@@ -826,56 +855,59 @@ document.addEventListener("DOMContentLoaded", () => {
       newColorStr = `rgb(${r}, ${g}, ${b})`;
     } else if (targetFormat === 'hsl') {
       const hsl = rgbToHslObj(r, g, b);
-      // Retain float precisions formatted nicely to 1 decimal place if needed, or precise integer formatting
-      const hStr = Math.round(hsl.h);
-      const sStr = Number(hsl.s.toFixed(1));
-      const lStr = Number(hsl.l.toFixed(1));
+      const hStr = Number(hsl.h.toFixed(1));
+      const sStr = Number(hsl.s.toFixed(2));
+      const lStr = Number(hsl.l.toFixed(2));
       newColorStr = `hsl(${hStr}, ${sStr}%, ${lStr}%)`;
     }
 
     if (newColorStr) {
       editor.replaceRange(newColorStr, { line: lineNum, ch: startCh }, { line: lineNum, ch: endCh });
       editor.setCursor({ line: lineNum, ch: startCh + newColorStr.length });
-      if (colorInput) colorInput.value = "";
+      
+      if (colorInput) {
+        colorInput.value = newColorStr;
+        colorInput.dispatchEvent(new Event('input'));
+      }
     }
   }
-
-  const colorRgbBtn = document.getElementById("color-rgb-btn");
-  const colorHexBtn = document.getElementById("color-hex-btn");
-  const colorHslBtn = document.getElementById("color-hsl-btn");
 
   if (colorRgbBtn) colorRgbBtn.addEventListener("click", () => convertColorAtCursor('rgb'));
   if (colorHexBtn) colorHexBtn.addEventListener("click", () => convertColorAtCursor('hex'));
   if (colorHslBtn) colorHslBtn.addEventListener("click", () => convertColorAtCursor('hsl'));
   
-    // --- DYNAMIC COLOR INPUT BACKGROUND, TEXT & BORDER READABILITY LOGIC ---
-  const colorInput = document.getElementById("colorInsertInput");
+  if (colorClearBtn && colorInput) {
+    colorClearBtn.addEventListener("click", () => {
+      colorInput.value = "";
+      colorInput.dispatchEvent(new Event('input'));
+      colorInput.focus();
+    });
+  }
+
+  // --- DYNAMIC COLOR INPUT BACKGROUND, TEXT & BORDER READABILITY LOGIC ---
   if (colorInput) {
     colorInput.addEventListener("input", (e) => {
       const val = e.target.value.trim();
       const rgb = parseColorString(val);
 
       if (rgb) {
-        // 1. Background set karo using '!important'
+        // 1. Background set using '!important'
         colorInput.style.setProperty('background-color', val, 'important');
 
-        // 2. YIQ formula se calculate karo ki color dark hai ya light
+        // 2. YIQ formula for perceived brightness calculation
         const brightness = (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000;
 
-        // 3. Text, Border aur Placeholder color dynamically set karo
+        // 3. Dynamic Text, Border & Placeholder Color
         if (brightness < 128) {
-          // Dark Background -> Light text & Light translucent border
           colorInput.style.setProperty('color', '#ffffff', 'important');
           colorInput.style.setProperty('border', '1px solid rgba(255, 255, 255, 0.5)', 'important');
           colorInput.style.setProperty('--bs-placeholder-color', 'rgba(255, 255, 255, 0.6)', 'important');
         } else {
-          // Light Background -> Dark text & Dark translucent border
           colorInput.style.setProperty('color', '#000000', 'important');
           colorInput.style.setProperty('border', '1px solid rgba(0, 0, 0, 0.4)', 'important');
           colorInput.style.setProperty('--bs-placeholder-color', 'rgba(0, 0, 0, 0.6)', 'important');
         }
       } else {
-        // Agar invalid color ho ya empty ho, toh default styling wapas laao
         colorInput.style.removeProperty('background-color');
         colorInput.style.removeProperty('color');
         colorInput.style.removeProperty('border');
@@ -1149,7 +1181,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (menuJsonExportBtn) {
     menuJsonExportBtn.addEventListener("click", () => {
       const backupData = {
-        version: "1.1.0",
+        version: "1.3.0",
         timestamp: new Date().toISOString(),
         html: window.htmlEditor.getValue(),
         css: window.cssEditor.getValue(),
