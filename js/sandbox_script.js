@@ -785,12 +785,10 @@ document.addEventListener("DOMContentLoaded", () => {
     let match;
     let targetMatch = null;
 
-    // 1. Prioritize manual input field value if present
     if (manualColorVal) {
       rgbObj = parseColorString(manualColorVal);
     }
 
-    // 2. Otherwise inspect cursor position in active editor
     if (!rgbObj) {
       while ((match = colorRegex.exec(line)) !== null) {
         const start = match.index;
@@ -821,7 +819,6 @@ document.addEventListener("DOMContentLoaded", () => {
         endCh = targetMatch.end;
       }
     } else {
-      // Check if cursor is on an existing color code to replace it cleanly
       while ((match = colorRegex.exec(line)) !== null) {
         const start = match.index;
         const end = start + match[0].length;
@@ -891,13 +888,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const rgb = parseColorString(val);
 
       if (rgb) {
-        // 1. Background set using '!important'
         colorInput.style.setProperty('background-color', val, 'important');
-
-        // 2. YIQ formula for perceived brightness calculation
         const brightness = (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000;
 
-        // 3. Dynamic Text, Border & Placeholder Color
         if (brightness < 128) {
           colorInput.style.setProperty('color', '#ffffff', 'important');
           colorInput.style.setProperty('border', '1px solid rgba(255, 255, 255, 0.5)', 'important');
@@ -1009,6 +1002,541 @@ document.addEventListener("DOMContentLoaded", () => {
       URL.revokeObjectURL(url);
     });
   }
+
+  // --- COMMAND PALETTE ENGINE ---
+  const cmdModal = document.getElementById("commandPaletteModal");
+  const cmdInput = document.getElementById("commandPaletteInput");
+  const cmdList = document.getElementById("commandPaletteList");
+  const cmdCloseBtn = document.getElementById("commandPaletteClose");
+  const headerCmdBtn = document.getElementById("header-cmd-btn");
+
+  // Zen Mode helper states
+  let isEditorZen = false;
+  let isPreviewZen = false;
+
+  function toggleEditorZen() {
+    isEditorZen = !isEditorZen;
+    isPreviewZen = false;
+    if (editorSection && previewSection) {
+      if (isEditorZen) {
+        editorSection.style.height = "100%";
+        editorSection.style.display = "flex";
+        previewSection.classList.add("d-none");
+        if (splitter) splitter.style.display = "none";
+      } else {
+        editorSection.style.height = "48%";
+        previewSection.style.height = "48%";
+        editorSection.style.display = "flex";
+        previewSection.classList.remove("d-none");
+        if (splitter) splitter.style.display = "";
+      }
+      refreshEditors();
+    }
+  }
+
+  function togglePreviewZen() {
+    isPreviewZen = !isPreviewZen;
+    isEditorZen = false;
+    if (editorSection && previewSection) {
+      if (isPreviewZen) {
+        previewSection.style.height = "100%";
+        previewSection.style.display = "flex";
+        editorSection.classList.add("d-none");
+        if (splitter) splitter.style.display = "none";
+      } else {
+        previewSection.style.height = "48%";
+        editorSection.style.height = "48%";
+        editorSection.style.display = "flex"; // <-- Fixed: Restored editor flex display
+        previewSection.style.display = "flex";
+        editorSection.classList.remove("d-none");
+        if (splitter) splitter.style.display = "";
+      }
+      refreshEditors();
+    }
+  }
+
+  // Define all available commands
+  const commands = [
+    // 1. Core Editors & Actions
+    {
+      id: "format",
+      title: "Format Current Code (Beautify)",
+      category: "Editor",
+      shortcut: "Alt + F",
+      action: () => formatCurrentEditor()
+    },
+    {
+      id: "layout-swap",
+      title: "Toggle Preview Layout (Preview Top / Bottom)",
+      category: "Layout",
+      shortcut: "Toolbar Icon",
+      action: () => {
+        const workspaceRow = document.getElementById("workspace-row");
+        if (workspaceRow) {
+          workspaceRow.classList.toggle("preview-on-top");
+          localStorage.setItem("sandbox_preview_on_top", workspaceRow.classList.contains("preview-on-top"));
+          refreshEditors();
+        }
+      }
+    },
+    {
+      id: "zen-editor",
+      title: "Toggle Zen Mode: Editor Panel (Fullscreen)",
+      category: "Layout",
+      shortcut: "",
+      action: () => toggleEditorZen()
+    },
+    {
+      id: "zen-preview",
+      title: "Toggle Zen Mode: Preview Panel (Fullscreen)",
+      category: "Layout",
+      shortcut: "",
+      action: () => togglePreviewZen()
+    },
+
+    // 2. Clear Individual Editors
+    {
+      id: "clear-html",
+      title: "Clear HTML Editor Only",
+      category: "Editor",
+      shortcut: "",
+      action: () => {
+        if (window.htmlEditor) {
+          window.htmlEditor.setValue("");
+          alert("🧹 HTML Editor cleared!");
+        }
+      }
+    },
+    {
+      id: "clear-css",
+      title: "Clear CSS Editor Only",
+      category: "Editor",
+      shortcut: "",
+      action: () => {
+        if (window.cssEditor) {
+          window.cssEditor.setValue("");
+          alert("🧹 CSS Editor cleared!");
+        }
+      }
+    },
+    {
+      id: "clear-js",
+      title: "Clear JavaScript Editor Only",
+      category: "Editor",
+      shortcut: "",
+      action: () => {
+        if (window.jsEditor) {
+          window.jsEditor.setValue("");
+          alert("🧹 JavaScript Editor cleared!");
+        }
+      }
+    },
+    {
+      id: "clear-console",
+      title: "Clear Console Logs",
+      category: "Debugging",
+      shortcut: "",
+      action: () => typeof window.clearConsole === 'function' && window.clearConsole()
+    },
+
+    // 3. Toggles (Word Wrap, Line Numbers, Font Ligatures)
+    {
+      id: "toggle-wordwrap",
+      title: "Toggle Word Wrap",
+      category: "Preferences",
+      shortcut: "",
+      action: () => {
+        const toggle = document.getElementById("wordWrapToggle");
+        if (toggle) {
+          toggle.checked = !toggle.checked;
+          toggle.dispatchEvent(new Event("change"));
+        }
+      }
+    },
+    {
+      id: "toggle-linenums",
+      title: "Toggle Line Numbers",
+      category: "Preferences",
+      shortcut: "",
+      action: () => {
+        const toggle = document.getElementById("lineNumToggle");
+        if (toggle) {
+          toggle.checked = !toggle.checked;
+          toggle.dispatchEvent(new Event("change"));
+        }
+      }
+    },
+    {
+      id: "toggle-ligatures",
+      title: "Toggle Font Ligatures",
+      category: "Preferences",
+      shortcut: "",
+      action: () => {
+        const toggle = document.getElementById("ligaturesToggle");
+        if (toggle && !toggle.disabled) {
+          toggle.checked = !toggle.checked;
+          toggle.dispatchEvent(new Event("change"));
+        } else {
+          alert("⚠️ Font ligatures are not supported by the currently selected font family.");
+        }
+      }
+    },
+
+    // 4. Appearance & Dropdown Selects (Frameworks, Themes, Font Size & Line Height)
+    {
+      id: "fw-none",
+      title: "CSS Framework: None (Vanilla CSS)",
+      category: "Appearance",
+      shortcut: "",
+      action: () => {
+        const el = document.querySelector('.framework-option[data-framework="none"]');
+        if (el) el.click();
+      }
+    },
+    {
+      id: "fw-bootstrap",
+      title: "CSS Framework: Bootstrap 5.3",
+      category: "Appearance",
+      shortcut: "",
+      action: () => {
+        const el = document.querySelector('.framework-option[data-framework="bootstrap"]');
+        if (el) el.click();
+      }
+    },
+    {
+      id: "fw-tailwind",
+      title: "CSS Framework: Tailwind CSS",
+      category: "Appearance",
+      shortcut: "",
+      action: () => {
+        const el = document.querySelector('.framework-option[data-framework="tailwind"]');
+        if (el) el.click();
+      }
+    },
+    {
+      id: "theme-dracula",
+      title: "Editor Theme: Dracula (Dark)",
+      category: "Appearance",
+      shortcut: "",
+      action: () => {
+        const el = document.querySelector('.theme-option[data-theme="dracula"]');
+        if (el) el.click();
+      }
+    },
+    {
+      id: "theme-monokai",
+      title: "Editor Theme: Monokai",
+      category: "Appearance",
+      shortcut: "",
+      action: () => {
+        const el = document.querySelector('.theme-option[data-theme="monokai"]');
+        if (el) el.click();
+      }
+    },
+    {
+      id: "theme-default",
+      title: "Editor Theme: Default (Light)",
+      category: "Appearance",
+      shortcut: "",
+      action: () => {
+        const el = document.querySelector('.theme-option[data-theme="default"]');
+        if (el) el.click();
+      }
+    },
+    {
+      id: "font-size-inc",
+      title: "Increase Font Size (+1px)",
+      category: "Appearance",
+      shortcut: "",
+      action: () => {
+        if (fontSizeRange) {
+          let val = parseInt(fontSizeRange.value, 10) + 1;
+          if (val > 24) val = 24;
+          fontSizeRange.value = val;
+          fontSizeRange.dispatchEvent(new Event("input"));
+        }
+      }
+    },
+    {
+      id: "font-size-dec",
+      title: "Decrease Font Size (-1px)",
+      category: "Appearance",
+      shortcut: "",
+      action: () => {
+        if (fontSizeRange) {
+          let val = parseInt(fontSizeRange.value, 10) - 1;
+          if (val < 10) val = 10;
+          fontSizeRange.value = val;
+          fontSizeRange.dispatchEvent(new Event("input"));
+        }
+      }
+    },
+    {
+      id: "line-height-inc",
+      title: "Increase Line Height (+0.1)",
+      category: "Appearance",
+      shortcut: "",
+      action: () => {
+        if (lineHeightRange) {
+          let val = parseFloat(lineHeightRange.value) + 0.1;
+          if (val > 2.0) val = 2.0;
+          lineHeightRange.value = val.toFixed(1);
+          lineHeightRange.dispatchEvent(new Event("input"));
+        }
+      }
+    },
+    {
+      id: "line-height-dec",
+      title: "Decrease Line Height (-0.1)",
+      category: "Appearance",
+      shortcut: "",
+      action: () => {
+        if (lineHeightRange) {
+          let val = parseFloat(lineHeightRange.value) - 0.1;
+          if (val < 1.0) val = 1.0;
+          lineHeightRange.value = val.toFixed(1);
+          lineHeightRange.dispatchEvent(new Event("input"));
+        }
+      }
+    },
+
+    // 5. More Settings Card Actions
+    {
+      id: "save-as",
+      title: "Save As (Download HTML)",
+      category: "More Settings",
+      shortcut: "",
+      action: () => {
+        const btn = document.getElementById("menu-export-btn");
+        if (btn) btn.click();
+      }
+    },
+    {
+      id: "view-source",
+      title: "View Source in New Tab",
+      category: "More Settings",
+      shortcut: "",
+      action: () => {
+        const btn = document.getElementById("menu-view-source-btn");
+        if (btn) btn.click();
+      }
+    },
+    {
+      id: "menu-format",
+      title: "Format Active Editor (Menu Action)",
+      category: "More Settings",
+      shortcut: "",
+      action: () => {
+        const btn = document.getElementById("menu-format-btn");
+        if (btn) btn.click();
+      }
+    },
+    {
+      id: "menu-reset",
+      title: "Reset All Editors",
+      category: "More Settings",
+      shortcut: "",
+      action: () => {
+        const btn = document.getElementById("menu-reset-btn");
+        if (btn) btn.click();
+      }
+    },
+    {
+      id: "backup-json",
+      title: "Backup Project as JSON",
+      category: "More Settings",
+      shortcut: "",
+      action: () => {
+        const btn = document.getElementById("menu-json-export-btn");
+        if (btn) btn.click();
+      }
+    },
+    {
+      id: "restore-json",
+      title: "Restore Project from JSON Backup",
+      category: "More Settings",
+      shortcut: "",
+      action: () => {
+        const btn = document.getElementById("menu-json-import-btn");
+        if (btn) btn.click();
+      }
+    },
+    {
+      id: "edit-snippets",
+      title: "Open Custom Snippets in JS Editor",
+      category: "Snippets",
+      shortcut: "",
+      action: () => {
+        const btn = document.getElementById("menu-snippets-edit-btn");
+        if (btn) btn.click();
+      }
+    },
+    {
+      id: "save-snippets",
+      title: "Save Custom Snippets from JS Editor",
+      category: "Snippets",
+      shortcut: "",
+      action: () => {
+        const btn = document.getElementById("menu-snippets-save-btn");
+        if (btn) btn.click();
+      }
+    },
+    {
+      id: "upload-snippets",
+      title: "Upload Custom Snippets JSON File",
+      category: "Snippets",
+      shortcut: "",
+      action: () => {
+        const btn = document.getElementById("menu-snippets-import-btn");
+        if (btn) btn.click();
+      }
+    },
+    {
+      id: "share-link",
+      title: "Copy Shareable URL Link",
+      category: "Share",
+      shortcut: "",
+      action: () => {
+        const btn = document.getElementById("header-share-btn");
+        if (btn) btn.click();
+      }
+    },
+    {
+      id: "reset-all-data",
+      title: "Reset All Data & Clear Storage",
+      category: "Danger Zone",
+      shortcut: "",
+      action: () => {
+        const btn = document.getElementById("clear-storage-btn");
+        if (btn) btn.click();
+      }
+    }
+  ];
+
+  let selectedCmdIndex = 0;
+
+  function renderCommandList(filter = "") {
+    cmdList.innerHTML = "";
+    const filtered = commands.filter(cmd => 
+      cmd.title.toLowerCase().includes(filter.toLowerCase()) ||
+      cmd.category.toLowerCase().includes(filter.toLowerCase())
+    );
+
+    if (filtered.length === 0) {
+      cmdList.innerHTML = `<div class="text-secondary text-center py-3" style="font-size: 0.85rem;">No matching commands found.</div>`;
+      return;
+    }
+
+    filtered.forEach((cmd, idx) => {
+      const item = document.createElement("div");
+      item.className = `cmd-item ${idx === selectedCmdIndex ? 'active' : ''}`;
+      item.innerHTML = `
+        <div>
+          <span class="text-info fw-bold" style="font-size: 0.7rem; text-transform: uppercase; margin-right: 6px;">[${cmd.category}]</span>
+          <span>${cmd.title}</span>
+        </div>
+        ${cmd.shortcut ? `<span class="cmd-shortcut">${cmd.shortcut}</span>` : ''}
+      `;
+      
+      item.addEventListener("click", () => {
+        closeCommandPalette();
+        cmd.action();
+      });
+
+      cmdList.appendChild(item);
+    });
+  }
+
+  function openCommandPalette() {
+    if (!cmdModal) return;
+    cmdModal.style.display = "flex";
+    cmdInput.value = "";
+    selectedCmdIndex = 0;
+    renderCommandList();
+    setTimeout(() => cmdInput.focus(), 50);
+  }
+
+  function closeCommandPalette() {
+    if (!cmdModal) return;
+    cmdModal.style.display = "none";
+  }
+
+  function refreshEditors() {
+    setTimeout(() => {
+      if (window.htmlEditor) window.htmlEditor.refresh();
+      if (window.cssEditor) window.cssEditor.refresh();
+      if (window.jsEditor) window.jsEditor.refresh();
+    }, 50);
+  }
+
+  // Event Listeners for Command Palette
+  if (headerCmdBtn) headerCmdBtn.addEventListener("click", openCommandPalette);
+  if (cmdCloseBtn) cmdCloseBtn.addEventListener("click", closeCommandPalette);
+  
+  if (cmdModal) {
+    cmdModal.addEventListener("click", (e) => {
+      if (e.target === cmdModal) closeCommandPalette();
+    });
+  }
+
+  if (cmdInput) {
+    cmdInput.addEventListener("input", (e) => {
+      selectedCmdIndex = 0;
+      renderCommandList(e.target.value);
+    });
+
+    cmdInput.addEventListener("keydown", (e) => {
+      const activeItems = cmdList.querySelectorAll(".cmd-item");
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        if (activeItems.length > 0) {
+          selectedCmdIndex = (selectedCmdIndex + 1) % activeItems.length;
+          updateActiveCmdItem(activeItems);
+        }
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        if (activeItems.length > 0) {
+          selectedCmdIndex = (selectedCmdIndex - 1 + activeItems.length) % activeItems.length;
+          updateActiveCmdItem(activeItems);
+        }
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        const activeItemsFiltered = commands.filter(cmd => 
+          cmd.title.toLowerCase().includes(cmdInput.value.toLowerCase()) ||
+          cmd.category.toLowerCase().includes(cmdInput.value.toLowerCase())
+        );
+        if (activeItemsFiltered[selectedCmdIndex]) {
+          closeCommandPalette();
+          activeItemsFiltered[selectedCmdIndex].action();
+        }
+      } else if (e.key === "Escape") {
+        closeCommandPalette();
+      }
+    });
+  }
+
+  function updateActiveCmdItem(items) {
+    items.forEach((item, idx) => {
+      if (idx === selectedCmdIndex) {
+        item.classList.add("active");
+        item.scrollIntoView({ block: "nearest" });
+      } else {
+        item.classList.remove("active");
+      }
+    });
+  }
+
+  // Global Keyboard Shortcut listener: Ctrl + Shift + P or Alt + P
+  document.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'p') || (e.altKey && e.key.toLowerCase() === 'p')) {
+      e.preventDefault();
+      if (cmdModal && cmdModal.style.display === "flex") {
+        closeCommandPalette();
+      } else {
+        openCommandPalette();
+      }
+    }
+  });
 
   // --- Settings UI handlers ---
   if (fontSizeRange && fontSizeBadge) {
