@@ -4,7 +4,7 @@
 
 # ⚡ Mobile Sandbox IDE (Live Editor)
 
-![Version: 1.4.0](https://img.shields.io/badge/version-v1.4.0-blue)
+![Version: 1.5.0](https://img.shields.io/badge/version-v1.5.0-blue)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A lightweight, multi-tab web code sandbox application designed specifically for mobile and desktop developers. Built using native JavaScript, CodeMirror 5, and Bootstrap 5.
@@ -27,6 +27,8 @@ A lightweight, multi-tab web code sandbox application designed specifically for 
 - **Custom JSON Snippets Engine:** Load, edit, and save your custom shortcuts directly inside the JS Editor with auto-validation (e.g., `clg` → `console.log()`).
 - **Enhanced Emmet & Dynamic Counter ($):** Expand Emmet abbreviations seamlessly (e.g., `h1{heading-$}` expands to `<h1>heading-1</h1>`, `ul>li*3>{Item $}` auto-numbers list items).
 - **Auto Bracket & Tag Closing:** Automatic pair completion for brackets (`{}`, `()`, `[]`) and auto-closing HTML tags with clean indentation on `Enter`.
+- **💬 Multi-Language Comment Toggle (`Ctrl + /` or `Cmd + /`):** Instantly comment or uncomment active lines or code selections across HTML (`<!-- -->`), CSS (`/* */`), and JavaScript (`//`).
+- **Custom JSON Snippets Engine & Persistence:** Load, edit, and save custom shortcuts directly inside the JS Editor with automatic merging against defaults—ensuring new built-in entries (like the complete `lorem10` to `lorem50` scale and `lorem` without value and `lorem100`) are seamlessly preserved without wiping user data.
 
 ### 🎨 Color & Appearance Tools
 - **Cursor Color Converter & Smart UI:** Convert color values (HEX ↔ RGB ↔ HSL) instantly at your editor cursor position or via manual input.
