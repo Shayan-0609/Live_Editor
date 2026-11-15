@@ -32,7 +32,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const savedFrameworkLabel = localStorage.getItem("sandbox_framework_label") || "None (Vanilla CSS)";
   const savedPreviewOnTop = localStorage.getItem("sandbox_preview_on_top") === "true";
 
-  // --- DEFAULT CUSTOM SNIPPETS (JSON format) ---
+  // --- DEFAULT CUSTOM SNIPPETS (JSON format with complete lorem scale) ---
   const defaultSnippets = {
     "js": {
       "clg": "console.log($1);",
@@ -43,7 +43,14 @@ document.addEventListener("DOMContentLoaded", () => {
     "html": {
       "t": "<tag>$1</tag>",
       "ul": "<ul>\n  <li>$1</li>\n</ul>",
-      "btn": "<button class=\"btn btn-$1\">$2</button>"
+      "btn": "<button class=\"btn btn-$1\">$2</button>",
+      "lorem": "Lorem ipsum dolor sit, amet consectetur adipisicing elit. Tempora, saepe molestias! Fugiat fuga, fugit, distinctio culpa ad dignissimos commodi molestiae cumque odio magni ipsum placeat dolorum, eius totam quae dolore!",
+      "lorem10": "Lorem ipsum dolor sit amet consectetur adipisicing elit. Quasi, illum.",
+      "lorem20": "Lorem ipsum, dolor sit amet consectetur adipisicing elit. Ducimus fugiat quam natus a vitae neque, corporis at qui illo quo?",
+      "lorem30": "Lorem ipsum, dolor sit amet consectetur adipisicing elit. Dolore facilis, perspiciatis corrupti repellat reprehenderit possimus delectus vero minus quibusdam magnam! Ratione veritatis porro voluptates ducimus sequi eligendi doloremque error dicta?",
+      "lorem40": "Lorem ipsum dolor, sit amet consectetur adipisicing elit. Dolore, optio aliquid voluptates sit voluptas provident dolorem minus eveniet expedita laborum repudiandae, ratione nisi reiciendis totam sequi nemo possimus, maiores tempora quae illum saepe? Explicabo laudantium ullam quam nulla quod iste?",
+      "lorem50": "Lorem ipsum dolor sit amet consectetur adipisicing elit. Dignissimos modi nisi corrupti? Commodi ipsa accusamus reprehenderit fugiat voluptatibus, non delectus sed blanditiis inventore rem. Quae maiores veniam quos repellat voluptatibus, debitis quasi! Et facere pariatur eveniet adipisci dignissimos exercitationem rem vitae praesentium tempora iste sequi sint, quas modi consectetur delectus.",
+      "lorem100": "Lorem ipsum dolor sit amet consectetur adipisicing elit. Beatae a porro ducimus nihil illum quas facere maxime, corrupti quos quasi doloribus molestias architecto nobis, inventore mollitia labore aliquam molestiae commodi. Molestias nulla reprehenderit eius recusandae consectetur debitis rerum possimus? Placeat dolorem tempore excepturi ipsum quisquam provident, ea sint animi eum at? Alias fugit sunt, maxime, iusto possimus iste ratione minus quasi nostrum accusamus officiis, est veritatis odit deserunt doloremque. Cumque nobis, culpa ut illum deleniti molestias consectetur! Voluptatem rem deleniti pariatur quae fugit adipisci voluptatibus nobis quos corporis doloribus, accusamus dignissimos est rerum ullam harum dicta ea autem sed laboriosam!"
     },
     "css": {
       "flex": "display: flex;\nalign-items: center;\njustify-content: center;",
@@ -51,12 +58,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  // Load user snippets or fallback to default
-  let customSnippets = defaultSnippets;
+  // Load user snippets and merge with defaults so new keys (lorem scale) are automatically included
+  let customSnippets = JSON.parse(JSON.stringify(defaultSnippets));
   try {
     const savedSnippets = localStorage.getItem("sandbox_custom_snippets");
     if (savedSnippets) {
-      customSnippets = JSON.parse(savedSnippets);
+      const parsed = JSON.parse(savedSnippets);
+      customSnippets = {
+        js: { ...defaultSnippets.js, ...(parsed.js || {}) },
+        html: { ...defaultSnippets.html, ...(parsed.html || {}) },
+        css: { ...defaultSnippets.css, ...(parsed.css || {}) }
+      };
+      localStorage.setItem("sandbox_custom_snippets", JSON.stringify(customSnippets, null, 2));
     } else {
       localStorage.setItem("sandbox_custom_snippets", JSON.stringify(defaultSnippets, null, 2));
     }
@@ -161,6 +174,84 @@ document.addEventListener("DOMContentLoaded", () => {
     matchBrackets: true,
     tabSize: 2
   });
+
+  // --- ADVANCED JS & MULTI-LANGUAGE COMMENT TOGGLE ENGINE (v1.5.0) ---
+  function toggleCustomComment() {
+    const activeTab = document.querySelector('#sandboxTabs .nav-link.active');
+    if (!activeTab) return;
+    
+    let editor = null;
+    let mode = 'js'; // 'js', 'css', 'html'
+    
+    if (activeTab.id === 'html-tab') {
+      editor = window.htmlEditor;
+      mode = 'html';
+    } else if (activeTab.id === 'css-tab') {
+      editor = window.cssEditor;
+      mode = 'css';
+    } else if (activeTab.id === 'js-tab') {
+      editor = window.jsEditor;
+      mode = 'js';
+    }
+    
+    if (!editor) return;
+
+    const selection = editor.getSelection();
+    
+    if (selection) {
+      if (mode === 'js' || mode === 'css') {
+        if (selection.startsWith('/*') && selection.endsWith('*/')) {
+          const unwrapped = selection.slice(2, -2).trim();
+          editor.replaceSelection(unwrapped);
+        } else {
+          editor.replaceSelection(`/* ${selection} */`);
+        }
+      } else if (mode === 'html') {
+        if (selection.startsWith('<!--') && selection.endsWith('-->')) {
+          const unwrapped = selection.slice(4, -3).trim();
+          editor.replaceSelection(unwrapped);
+        } else {
+          editor.replaceSelection(`<!-- ${selection} -->`);
+        }
+      }
+      return;
+    }
+
+    const cursor = editor.getCursor();
+    const lineNum = cursor.line;
+    const lineText = editor.getLine(lineNum);
+    let newText = lineText;
+
+    const indentMatch = lineText.match(/^([ \t]*)/);
+    const indent = indentMatch ? indentMatch[1] : '';
+    const trimmed = lineText.trim();
+
+    if (mode === 'js') {
+      if (trimmed.startsWith('//')) {
+        newText = lineText.replace(/(\s*)\/\/\s?/, '$1');
+      } else {
+        const content = lineText.substring(indent.length);
+        newText = indent + '// ' + content;
+      }
+    } else if (mode === 'css') {
+      if (trimmed.startsWith('/*') && trimmed.endsWith('*/')) {
+        newText = lineText.replace(/^\s*\/\*\s?/, '').replace(/\s*\*\/$/, '');
+      } else {
+        const content = lineText.substring(indent.length);
+        newText = indent + '/* ' + content + ' */';
+      }
+    } else if (mode === 'html') {
+      if (trimmed.startsWith('<!--') && trimmed.endsWith('-->')) {
+        newText = lineText.replace(/^\s*<!--\s?/, '').replace(/\s*-->$/, '');
+      } else {
+        const content = lineText.substring(indent.length);
+        newText = indent + '<!-- ' + content + ' -->';
+      }
+    }
+
+    editor.replaceRange(newText, { line: lineNum, ch: 0 }, { line: lineNum, ch: lineText.length });
+    editor.setCursor({ line: lineNum, ch: editor.getLine(lineNum).length });
+  }
 
   // --- EMMET & CUSTOM SNIPPET INTEGRATED ENGINE (Fixed for $) ---
   function splitByOperator(str, op) {
@@ -352,55 +443,57 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function setupSmartEditorFeatures(cm, mode) {
-    cm.setOption("extraKeys", {
-      "Tab": function(cm) {
-        const cursor = cm.getCursor();
-        const line = cm.getLine(cursor.line);
-        const lineBefore = line.substring(0, cursor.ch);
-        const words = lineBefore.trim().split(/\s+/);
-        const lastWord = words[words.length - 1] || "";
+    const extraKeys = cm.getOption("extraKeys") || {};
+    extraKeys["Ctrl-/"] = function(cm) { toggleCustomComment(); };
+    extraKeys["Cmd-/"] = function(cm) { toggleCustomComment(); };
+    
+    extraKeys["Tab"] = function(cm) {
+      const cursor = cm.getCursor();
+      const line = cm.getLine(cursor.line);
+      const lineBefore = line.substring(0, cursor.ch);
+      const words = lineBefore.trim().split(/\s+/);
+      const lastWord = words[words.length - 1] || "";
 
-        // 1. Check Custom Snippets first based on mode (js, html, css)
-        let langKey = "html";
-        if (mode === "javascript") langKey = "js";
-        else if (mode === "css") langKey = "css";
+      let langKey = "html";
+      if (mode === "javascript") langKey = "js";
+      else if (mode === "css") langKey = "css";
 
-        if (customSnippets[langKey] && customSnippets[langKey][lastWord]) {
-          let snippetTpl = customSnippets[langKey][lastWord];
+      if (customSnippets[langKey] && customSnippets[langKey][lastWord]) {
+        let snippetTpl = customSnippets[langKey][lastWord];
+        const indentMatch = line.match(/^([ \t]*)/);
+        let baseIndent = indentMatch ? indentMatch[1] : '';
+        
+        let formattedSnippet = snippetTpl.split('\n').map((l, idx) => idx === 0 ? l : baseIndent + l).join('\n');
+        let startCh = cursor.ch - lastWord.length;
+
+        cm.replaceRange(formattedSnippet, {line: cursor.line, ch: startCh}, cursor);
+        return;
+      }
+
+      if (mode === "htmlmixed" || mode === "html") {
+        const match = lineBefore.match(/([a-zA-Z0-9\-\.\#\[\]\=\"\:\;\*\+\(\)\>\{\},\s\$]+)+$/);
+        if (match) {
+          let abbr = match[0].trim();
+          let startCh = cursor.ch - abbr.length;
           const indentMatch = line.match(/^([ \t]*)/);
           let baseIndent = indentMatch ? indentMatch[1] : '';
-          
-          let formattedSnippet = snippetTpl.split('\n').map((l, idx) => idx === 0 ? l : baseIndent + l).join('\n');
-          let startCh = cursor.ch - lastWord.length;
 
-          cm.replaceRange(formattedSnippet, {line: cursor.line, ch: startCh}, cursor);
-          return;
-        }
-
-        // 2. Fallback to Emmet expansion for HTML/XML
-        if (mode === "htmlmixed" || mode === "html") {
-          const match = lineBefore.match(/([a-zA-Z0-9\-\.\#\[\]\=\"\:\;\*\+\(\)\>\{\},\s\$]+)+$/);
-          if (match) {
-            let abbr = match[0].trim();
-            let startCh = cursor.ch - abbr.length;
-            const indentMatch = line.match(/^([ \t]*)/);
-            let baseIndent = indentMatch ? indentMatch[1] : '';
-
-            let expanded = expandEmmet(abbr, baseIndent);
-            if (expanded) {
-              cm.replaceRange(expanded, {line: cursor.line, ch: startCh}, cursor);
-              return;
-            }
+          let expanded = expandEmmet(abbr, baseIndent);
+          if (expanded) {
+            cm.replaceRange(expanded, {line: cursor.line, ch: startCh}, cursor);
+            return;
           }
         }
-
-        if (cm.somethingSelected()) {
-          cm.indentSelection("add");
-        } else {
-          cm.replaceRange("  ", cm.getCursor(), null, "+input");
-        }
       }
-    });
+
+      if (cm.somethingSelected()) {
+        cm.indentSelection("add");
+      } else {
+        cm.replaceRange("  ", cm.getCursor(), null, "+input");
+      }
+    };
+
+    cm.setOption("extraKeys", extraKeys);
   }
 
   setupSmartEditorFeatures(window.htmlEditor, "htmlmixed");
@@ -511,7 +604,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const previewSection = document.getElementById("preview-section");
   const workspaceRow = document.getElementById("workspace-row");
 
-  // Apply saved layout state (Preview on top / Editor down) on startup
   if (savedPreviewOnTop && workspaceRow) {
     workspaceRow.classList.add("preview-on-top");
   }
@@ -550,7 +642,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 50);
   });
 
-  // 1.2 Hamburger Layout Swap (Auto-saved state)
+  // 1.2 Hamburger Layout Swap
   const hamburgerBtn = document.getElementById("hamburger-btn");
   if (hamburgerBtn && workspaceRow) {
     hamburgerBtn.addEventListener("click", () => {
@@ -679,7 +771,7 @@ document.addEventListener("DOMContentLoaded", () => {
   enableAutoScroll(window.cssEditor);
   enableAutoScroll(window.jsEditor);
 
-  // --- PRECISE COLOR CONVERTER LOGIC (ZERO ROUND-TRIP DRIFT) ---
+  // --- PRECISE COLOR CONVERTER LOGIC ---
   function parseColorString(str) {
     str = str.trim().toLowerCase();
     if (str.startsWith('#')) {
@@ -881,7 +973,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // --- DYNAMIC COLOR INPUT BACKGROUND, TEXT & BORDER READABILITY LOGIC ---
   if (colorInput) {
     colorInput.addEventListener("input", (e) => {
       const val = e.target.value.trim();
@@ -1010,7 +1101,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const cmdCloseBtn = document.getElementById("commandPaletteClose");
   const headerCmdBtn = document.getElementById("header-cmd-btn");
 
-  // Zen Mode helper states
   let isEditorZen = false;
   let isPreviewZen = false;
 
@@ -1046,7 +1136,7 @@ document.addEventListener("DOMContentLoaded", () => {
       } else {
         previewSection.style.height = "48%";
         editorSection.style.height = "48%";
-        editorSection.style.display = "flex"; // <-- Fixed: Restored editor flex display
+        editorSection.style.display = "flex";
         previewSection.style.display = "flex";
         editorSection.classList.remove("d-none");
         if (splitter) splitter.style.display = "";
@@ -1055,9 +1145,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Define all available commands
+  // Define all available commands (including v1.5.0 Toggle Comment)
   const commands = [
-    // 1. Core Editors & Actions
+    {
+      id: "toggle-comment",
+      title: "Toggle Comment (Active Line / Selection)",
+      category: "Editor",
+      shortcut: "Ctrl + /",
+      action: () => toggleCustomComment()
+    },
     {
       id: "format",
       title: "Format Current Code (Beautify)",
@@ -1093,8 +1189,6 @@ document.addEventListener("DOMContentLoaded", () => {
       shortcut: "",
       action: () => togglePreviewZen()
     },
-
-    // 2. Clear Individual Editors
     {
       id: "clear-html",
       title: "Clear HTML Editor Only",
@@ -1138,8 +1232,6 @@ document.addEventListener("DOMContentLoaded", () => {
       shortcut: "",
       action: () => typeof window.clearConsole === 'function' && window.clearConsole()
     },
-
-    // 3. Toggles (Word Wrap, Line Numbers, Font Ligatures)
     {
       id: "toggle-wordwrap",
       title: "Toggle Word Wrap",
@@ -1181,8 +1273,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
     },
-
-    // 4. Appearance & Dropdown Selects (Frameworks, Themes, Font Size & Line Height)
     {
       id: "fw-none",
       title: "CSS Framework: None (Vanilla CSS)",
@@ -1299,8 +1389,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
     },
-
-    // 5. More Settings Card Actions
     {
       id: "save-as",
       title: "Save As (Download HTML)",
@@ -1469,7 +1557,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 50);
   }
 
-  // Event Listeners for Command Palette
   if (headerCmdBtn) headerCmdBtn.addEventListener("click", openCommandPalette);
   if (cmdCloseBtn) cmdCloseBtn.addEventListener("click", closeCommandPalette);
   
@@ -1526,7 +1613,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Global Keyboard Shortcut listener: Ctrl + Shift + P or Alt + P
   document.addEventListener("keydown", (e) => {
     if ((e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'p') || (e.altKey && e.key.toLowerCase() === 'p')) {
       e.preventDefault();
@@ -1704,16 +1790,18 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Backup & Restore
+  // --- Backup & Restore (v1.5.0 Dynamic Version & Snippets Support) ---
+  const currentVersion = "1.5.0";
   const menuJsonExportBtn = document.getElementById("menu-json-export-btn");
   if (menuJsonExportBtn) {
     menuJsonExportBtn.addEventListener("click", () => {
       const backupData = {
-        version: "1.3.0",
+        version: currentVersion,
         timestamp: new Date().toISOString(),
         html: window.htmlEditor.getValue(),
         css: window.cssEditor.getValue(),
         js: window.jsEditor.getValue(),
+        snippets: customSnippets,
         settings: {
           fontSize: localStorage.getItem("sandbox_font_size"),
           fontWeight: localStorage.getItem("sandbox_font_weight"),
@@ -1733,7 +1821,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `sandbox-backup-${Date.now()}.json`;
+      a.download = `sandbox-backup-v${currentVersion}-${Date.now()}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -1755,6 +1843,14 @@ document.addEventListener("DOMContentLoaded", () => {
           if (data.html !== undefined) window.htmlEditor.setValue(data.html);
           if (data.css !== undefined) window.cssEditor.setValue(data.css);
           if (data.js !== undefined) window.jsEditor.setValue(data.js);
+          if (data.snippets !== undefined) {
+            customSnippets = {
+              js: { ...defaultSnippets.js, ...(data.snippets.js || {}) },
+              html: { ...defaultSnippets.html, ...(data.snippets.html || {}) },
+              css: { ...defaultSnippets.css, ...(data.snippets.css || {}) }
+            };
+            localStorage.setItem("sandbox_custom_snippets", JSON.stringify(customSnippets, null, 2));
+          }
           if (data.settings) {
             if (data.settings.fontSize) localStorage.setItem("sandbox_font_size", data.settings.fontSize);
             if (data.settings.fontWeight) localStorage.setItem("sandbox_font_weight", data.settings.fontWeight);
@@ -1769,7 +1865,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (data.settings.framework) localStorage.setItem("sandbox_framework", data.settings.framework);
             if (data.settings.frameworkLabel) localStorage.setItem("sandbox_framework_label", data.settings.frameworkLabel);
           }
-          alert("📂 Project restored successfully!");
+          alert("📂 Project and snippets restored successfully!");
           location.reload();
         } catch (err) {
           alert("❌ Invalid JSON backup file!");
