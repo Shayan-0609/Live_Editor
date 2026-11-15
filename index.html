@@ -6,36 +6,36 @@
     <title>Sandbox App</title>
     <meta name="description" content="Code SandBox (Multi-Tab) WebApp for html, css and javascript, using CodeMirror5, and bootstrap5.3+" />
     <meta name="theme-color" content="#ced4da" />
-    
+
     <!-- Favicons setup -->
-    <link rel="icon" href="assets/favicon.ico">
-    <link rel="icon" href="assets/favicon-32x32.png" type="image/png" sizes="32x32">
-    <link rel="icon" href="assets/favicon-16x16.png" type="image/png" sizes="16x16">
-    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-    
+    <link rel="icon" href="assets/favicon.ico" />
+    <link rel="icon" href="assets/favicon-32x32.png" type="image/png" sizes="32x32" />
+    <link rel="icon" href="assets/favicon-16x16.png" type="image/png" sizes="16x16" />
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+
     <!-- Bootstrap 5 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" defer></script>
-  
+
     <!-- Google Fonts for Coding -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600;700&family=Google+Sans+Code:ital,wght@0,300;0,400;0,500;0,700;1,400&family=JetBrains+Mono:wght@300;400;500;600;700&family=Roboto+Mono:wght@300;400;500;600;700&family=Source+Code+Pro:wght@300;400;500;600;700&family=Ubuntu+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600;700&family=Google+Sans+Code:ital,wght@0,300;0,400;0,500;0,700;1,400&family=JetBrains+Mono:wght@300;400;500;600;700&family=Roboto+Mono:wght@300;400;500;600;700&family=Source+Code+Pro:wght@300;400;500;600;700&family=Ubuntu+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" />
 
     <!-- CodeMirror 5 Core -->
     <link rel="stylesheet" href="CodeMirror-5/lib/codemirror.css" />
     <script src="CodeMirror-5/lib/codemirror.js"></script>
-  
+
     <!-- CodeMirror Themes -->
     <link rel="stylesheet" href="CodeMirror-5/theme/dracula.css" />
     <link rel="stylesheet" href="CodeMirror-5/theme/monokai.css" />
-  
+
     <!-- CodeMirror Language Modes -->
     <script src="CodeMirror-5/mode/xml/xml.js"></script>
     <script src="CodeMirror-5/mode/javascript/javascript.js"></script>
     <script src="CodeMirror-5/mode/css/css.js"></script>
     <script src="CodeMirror-5/mode/htmlmixed/htmlmixed.js"></script>
-  
+
     <!-- CodeMirror Useful Addons -->
     <script src="CodeMirror-5/addon/edit/matchbrackets.js"></script>
     <script src="CodeMirror-5/addon/edit/closebrackets.js"></script>
@@ -46,7 +46,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.11/beautify.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.11/beautify-css.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.11/beautify-html.min.js"></script>
-  
+
     <!-- SandBox Files -->
     <link rel="stylesheet" href="css/sandbox_css.css" />
     <script src="js/sandbox_script.js" defer></script>
@@ -57,20 +57,54 @@
     <header class="bg-transparent flex-shrink-0">
       <div class="container-fluid px-3 border-bottom border-2 border-white border-opacity-10 py-2 shadow-sm d-flex justify-content-between align-items-center">
         <h5 class="mb-0 text-light fs-6">⚡ Live Editor</h5>
-        
+
         <!-- Header Action Buttons -->
         <div class="d-flex align-items-center gap-2">
+          <!-- Share Button -->
           <button id="header-share-btn" class="btn btn-sm btn-dark border border-secondary text-light py-1 px-2 d-flex align-items-center gap-1 shadow-sm" style="font-size: 0.75rem;" title="Share Code via URL">
-            <span>🔗</span> <span class="d-none d-sm-inline">Share</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="18" cy="5" r="3"></circle>
+              <circle cx="6" cy="12" r="3"></circle>
+              <circle cx="18" cy="19" r="3"></circle>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+            </svg>
+            <span class="d-none d-sm-inline">Share</span>
           </button>
+
+          <!-- Format Button -->
           <button id="header-format-btn" class="btn btn-sm btn-dark border border-secondary text-light py-1 px-2 d-flex align-items-center gap-1 shadow-sm" style="font-size: 0.75rem;" title="Format Active Editor">
-            <span>✨</span> <span class="d-none d-sm-inline">Format</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6l2.1 2.1M5.6 18.4l2.1-2.1m8.6-8.6l2.1-2.1"></path>
+            </svg>
+            <span class="d-none d-sm-inline">Format</span>
           </button>
-          <button id="header-download-btn" class="btn btn-sm btn-info py-1 px-2 d-flex align-items-center gap-1 shadow-sm text-dark fw-semibold" style="font-size: 0.75rem;" title="Download Project">
-            <span>💾</span> <span class="d-none d-sm-inline">Export</span>
+
+          <!-- Export Button -->
+          <button id="header-download-btn" class="btn btn-sm btn-dark border border-secondary py-1 px-2 d-flex align-items-center gap-1 shadow-sm text-light fw-semibold" style="font-size: 0.75rem;" title="Download Project">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span class="d-none d-sm-inline">Export</span>
           </button>
-          <button class="btn btn-sm btn-dark border border-secondary text-light py-1 px-2 shadow-sm" type="button" data-bs-toggle="offcanvas" data-bs-target="#settingsOffcanvas" aria-controls="settingsOffcanvas" title="Settings" style="font-size: 0.75rem;">
-            ⚙️
+
+          <!-- Command Palette Header Button -->
+          <button id="header-cmd-btn" class="btn btn-sm btn-dark border border-secondary text-light py-1 px-2 d-flex align-items-center gap-1 shadow-sm" style="font-size: 0.75rem;" title="Command Palette (Alt+P)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="4 17 10 11 4 5"></polyline>
+              <line x1="12" y1="19" x2="20" y2="19"></line>
+            </svg>
+            <span class="d-none d-sm-inline">Cmd</span>
+          </button>
+
+          <!-- Settings Button -->
+          <button class="btn btn-sm btn-dark border border-secondary text-light py-1 px-2 d-flex align-items-center shadow-sm" type="button" data-bs-toggle="offcanvas" data-bs-target="#settingsOffcanvas" aria-controls="settingsOffcanvas" title="Settings" style="font-size: 0.75rem;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
           </button>
         </div>
       </div>
@@ -79,7 +113,6 @@
     <!-- Main Workspace -->
     <main class="container-fluid py-2 px-3 d-flex flex-column flex-grow-1 overflow-hidden" style="height: calc(100vh - 50px); height: calc(100dvh - 50px);">
       <div id="workspace-row" class="w-100 h-100 d-flex flex-column position-relative">
-        
         <!-- 1. Input Editors Section -->
         <div id="editor-section" class="w-100 d-flex flex-column" style="height: 48%;">
           <div class="card h-100 w-100 d-flex flex-column shadow-sm rounded-bottom-0 border-0">
@@ -101,10 +134,16 @@
             </div>
             <div class="card-body p-0 flex-grow-1 overflow-hidden w-100">
               <div class="tab-content h-100 w-100 bg-dark" id="sandboxTabContent">
-                <div class="tab-pane fade show active h-100 w-100" id="html-pane" role="tabpanel"><textarea id="html-code" placeholder="Write HTML here..."></textarea></div>
-                <div class="tab-pane fade h-100 w-100" id="css-pane" role="tabpanel"><textarea id="css-code" placeholder="Write CSS here..."></textarea></div>
-                <div class="tab-pane fade h-100 w-100" id="js-pane" role="tabpanel"><textarea id="js-code" placeholder="Write JavaScript here..."></textarea></div>
-                
+                <div class="tab-pane fade show active h-100 w-100" id="html-pane" role="tabpanel">
+                  <textarea id="html-code" placeholder="Write HTML here..."></textarea>
+                </div>
+                <div class="tab-pane fade h-100 w-100" id="css-pane" role="tabpanel">
+                  <textarea id="css-code" placeholder="Write CSS here..."></textarea>
+                </div>
+                <div class="tab-pane fade h-100 w-100" id="js-pane" role="tabpanel">
+                  <textarea id="js-code" placeholder="Write JavaScript here..."></textarea>
+                </div>
+
                 <!-- Console Pane -->
                 <div class="tab-pane fade h-100 w-100 d-flex flex-column" id="console-pane" role="tabpanel">
                   <div class="bg-dark px-3 py-1 border-bottom border-secondary d-flex justify-content-between align-items-center flex-shrink-0" style="font-size: 0.75rem;">
@@ -115,7 +154,6 @@
                     <span class="text-secondary">// Console logs and errors will appear here...</span>
                   </div>
                 </div>
-
               </div>
             </div>
           </div>
@@ -151,7 +189,6 @@
             </div>
           </div>
         </div>
-
       </div>
     </main>
 
@@ -162,26 +199,25 @@
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
       </div>
       <div class="offcanvas-body d-flex flex-column gap-3 py-3" style="font-size: 0.9rem;">
-        
         <!-- Section 1: Editor Setting -->
         <div class="p-3 bg-dark border border-secondary border-opacity-50 rounded-3 shadow-sm">
           <h6 class="text-light fs-6 mb-3 border-bottom border-secondary pb-2 fw-semibold">Editor Setting</h6>
           <div class="d-flex justify-content-between align-items-center mb-2">
             <span class="text-light">Word Wrap</span>
             <div class="form-check form-switch">
-              <input class="form-check-input" type="checkbox" role="switch" id="wordWrapToggle" checked>
+              <input class="form-check-input" type="checkbox" role="switch" id="wordWrapToggle" checked />
             </div>
           </div>
           <div class="d-flex justify-content-between align-items-center mb-2">
             <span class="text-light">Line Number</span>
             <div class="form-check form-switch">
-              <input class="form-check-input" type="checkbox" role="switch" id="lineNumToggle" checked>
+              <input class="form-check-input" type="checkbox" role="switch" id="lineNumToggle" checked />
             </div>
           </div>
           <div class="d-flex justify-content-between align-items-center">
             <span class="text-light">Font Ligatures</span>
             <div class="form-check form-switch">
-              <input class="form-check-input" type="checkbox" role="switch" id="ligaturesToggle" checked>
+              <input class="form-check-input" type="checkbox" role="switch" id="ligaturesToggle" checked />
             </div>
           </div>
         </div>
@@ -190,7 +226,7 @@
         <div class="p-3 bg-dark border border-secondary border-opacity-50 rounded-3 shadow-sm">
           <h6 class="text-light fs-6 mb-2 border-bottom border-secondary pb-2 fw-semibold">🎨 Color Converter</h6>
           <p class="text-secondary mb-2" style="font-size: 0.78rem;">Cursor-based color grabber or manual insert:</p>
-          
+
           <div class="mb-2">
             <input type="text" id="colorInsertInput" class="form-control form-control-sm bg-secondary text-light shadow-none" placeholder="e.g. #343a40 or rgb(52,58,64)" style="font-size: 0.8rem; pointer-events: auto;" />
           </div>
@@ -206,7 +242,7 @@
         <!-- Section 2: Appearance & Frameworks -->
         <div class="p-3 bg-dark border border-secondary border-opacity-50 rounded-3 shadow-sm">
           <h6 class="text-light fs-6 mb-3 border-bottom border-secondary pb-2 fw-semibold">Appearance</h6>
-          
+
           <div class="mb-3">
             <label class="form-label text-light mb-1" style="font-size: 0.85rem;">CSS Framework</label>
             <div class="dropdown">
@@ -246,7 +282,7 @@
                   <li><a class="dropdown-item font-option" href="#" data-font="'Source Code Pro', monospace" data-style="normal" data-label="Pro IDE">Pro IDE</a></li>
                   <li><a class="dropdown-item font-option" href="#" data-font="'Fira Code', monospace" data-style="normal" data-label="VS Code Style">VS Code Style</a></li>
                   <li><a class="dropdown-item font-option" href="#" data-font="'JetBrains Mono', monospace" data-style="normal" data-label="JetBrains IDE">JetBrains IDE</a></li>
-                  <li><hr class="dropdown-divider border-secondary"></li>
+                  <li><hr class="dropdown-divider border-secondary" /></li>
                   <li><a class="dropdown-item font-option" href="#" data-font="'Google Sans Code', monospace" data-style="normal" data-label="Google Sans Code">Google Sans Code</a></li>
                   <li><a class="dropdown-item font-option" href="#" data-font="'Google Sans Code', monospace" data-style="italic" data-label="Google Sans Code (Italic)">Google Sans Code (Italic)</a></li>
                   <li><a class="dropdown-item font-option" href="#" data-font="'Fira Code', monospace" data-style="normal" data-label="Fira Code">Fira Code</a></li>
@@ -264,7 +300,7 @@
               <span class="text-light" style="font-size: 0.85rem;">Select Font Size</span>
               <span class="badge bg-secondary px-2 py-1" id="fontSizeBadge" style="font-size: 0.8rem;">14px</span>
             </div>
-            <input type="range" class="form-range" id="fontSizeRange" min="10" max="24" step="1" value="14">
+            <input type="range" class="form-range" id="fontSizeRange" min="10" max="24" step="1" value="14" />
           </div>
 
           <div class="mb-3">
@@ -288,7 +324,7 @@
               <span class="text-light" style="font-size: 0.85rem;">Line Height</span>
               <span class="badge bg-secondary px-2 py-1" id="lineHeightBadge" style="font-size: 0.8rem;">1.4</span>
             </div>
-            <input type="range" class="form-range" id="lineHeightRange" min="1.0" max="2.0" step="0.1" value="1.4">
+            <input type="range" class="form-range" id="lineHeightRange" min="1.0" max="2.0" step="0.1" value="1.4" />
           </div>
         </div>
 
@@ -325,9 +361,9 @@
               <button id="menu-json-import-btn" class="btn btn-outline-warning btn-sm w-100 d-flex align-items-center justify-content-center gap-1 py-2 fw-semibold" style="font-size: 0.8rem;" title="Restore Project from JSON">
                 <span>Restore JSON</span> 📂
               </button>
-              <input type="file" id="jsonFileInput" accept=".json" class="d-none">
+              <input type="file" id="jsonFileInput" accept=".json" class="d-none" />
             </div>
-            
+
             <!-- Custom Snippets Editor & Save Buttons -->
             <div class="col-6">
               <button id="menu-snippets-edit-btn" class="btn btn-outline-info btn-sm w-100 d-flex align-items-center justify-content-center gap-1 py-2 fw-semibold" style="font-size: 0.8rem;" title="Open Snippets JSON in JS Editor">
@@ -343,7 +379,7 @@
               <button id="menu-snippets-import-btn" class="btn btn-outline-success btn-sm w-100 d-flex align-items-center justify-content-center gap-1 py-2 fw-semibold" style="font-size: 0.8rem;" title="Upload JSON Snippets File">
                 <span>📂 Upload Snippets</span>
               </button>
-              <input type="file" id="snippetsFileInput" accept=".json" class="d-none">
+              <input type="file" id="snippetsFileInput" accept=".json" class="d-none" />
             </div>
 
             <div class="col-6">
@@ -356,6 +392,20 @@
 
         <div class="mt-auto text-center text-secondary py-2" style="font-size: 0.75rem;">
           Mobile Sandbox IDE • Built with CodeMirror & Bootstrap
+        </div>
+      </div>
+    </div>
+
+    <!-- Command Palette Overlay Modal -->
+    <div id="commandPaletteModal" class="command-palette-overlay" style="display: none;">
+      <div class="command-palette-box">
+        <div class="command-palette-header">
+          <span class="text-secondary ps-2">&gt;</span>
+          <input type="text" id="commandPaletteInput" placeholder="Type a command (e.g., format, theme, export)..." autocomplete="off" spellcheck="false" />
+          <button id="commandPaletteClose" class="btn btn-sm text-secondary">ESC</button>
+        </div>
+        <div id="commandPaletteList" class="command-palette-list">
+          <!-- Commands will be dynamically rendered here -->
         </div>
       </div>
     </div>

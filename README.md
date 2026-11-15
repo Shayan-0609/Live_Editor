@@ -4,7 +4,7 @@
 
 # ⚡ Mobile Sandbox IDE (Live Editor)
 
-![Version: 1.3.0](https://img.shields.io/badge/version-v1.3.0-blue)
+![Version: 1.4.0](https://img.shields.io/badge/version-v1.4.0-blue)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A lightweight, multi-tab web code sandbox application designed specifically for mobile and desktop developers. Built using native JavaScript, CodeMirror 5, and Bootstrap 5.
@@ -18,6 +18,10 @@ A lightweight, multi-tab web code sandbox application designed specifically for 
 ---
 
 ## ✨ Features
+
+### 🚀 Power-User & Navigation Tools
+- **⚡ VS Code Style Command Palette (`Alt + P` or `Ctrl + Shift + P`):** Lightning-fast command hub to toggle preferences (*Word Wrap, Line Numbers, Font Ligatures*), switch themes (*Dracula, Monokai, Light*), change CSS frameworks (*Vanilla, Bootstrap, Tailwind*), clear individual editors or console, trigger Zen Modes, and execute More Settings actions instantly without opening the settings drawer.
+- **🖥️ Zen Mode Layouts:** Fullscreen distraction-free toggles specifically for the Editor Panel or Preview Panel to maximize coding space on mobile and desktop.
 
 ### 🧰 Smart Code Editing & Automation
 - **Custom JSON Snippets Engine:** Load, edit, and save your custom shortcuts directly inside the JS Editor with auto-validation (e.g., `clg` → `console.log()`).
