@@ -3,17 +3,20 @@ document.addEventListener("DOMContentLoaded", () => {
     if (window.location.hash && window.location.hash.startsWith("#code=")) {
       const hashVal = window.location.hash.substring(6);
       if (hashVal) {
-        const jsonStr = decodeURIComponent(escape(atob(hashVal)));
-        const sharedData = JSON.parse(jsonStr);
-        if (sharedData.html !== undefined) localStorage.setItem("sandbox_html", sharedData.html);
-        if (sharedData.css !== undefined) localStorage.setItem("sandbox_css", sharedData.css);
-        if (sharedData.js !== undefined) localStorage.setItem("sandbox_js", sharedData.js);
-        history.replaceState(null, null, window.location.pathname);
+        const b64 = hashVal.replace(/-/g, "+").replace(/_/g, "/");
+        const bin = atob(b64 + "=".repeat((4 - (b64.length % 4)) % 4));
+        const sharedData = JSON.parse(new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0))));
+        if (sharedData && typeof sharedData.html === "string") localStorage.setItem("sandbox_html", sharedData.html);
+        if (sharedData && typeof sharedData.css === "string") localStorage.setItem("sandbox_css", sharedData.css);
+        if (sharedData && typeof sharedData.js === "string") localStorage.setItem("sandbox_js", sharedData.js);
+        history.replaceState(null, null, window.location.pathname + window.location.search);
       }
     }
   } catch (e) {
     console.error("Error loading shared code from URL hash:", e);
   }
+
+  if (typeof CodeMirror === "undefined") { alert("CodeMirror failed to load. Check the CodeMirror-5 files."); return; }
 
   const savedFontSize = localStorage.getItem("sandbox_font_size") || "14";
   const savedFontSetting = localStorage.getItem("sandbox_font_setting") || "monospace|normal";
@@ -59,16 +62,17 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
+  function mergeSnippets(parsed) {
+    const p = parsed && typeof parsed === "object" ? parsed : {};
+    return { js: { ...defaultSnippets.js, ...(p.js || {}) }, html: { ...defaultSnippets.html, ...(p.html || {}) }, css: { ...defaultSnippets.css, ...(p.css || {}) } };
+  }
+
   let customSnippets = JSON.parse(JSON.stringify(defaultSnippets));
   try {
     const savedSnippets = localStorage.getItem("sandbox_custom_snippets");
     if (savedSnippets) {
       const parsed = JSON.parse(savedSnippets);
-      customSnippets = {
-        js: { ...defaultSnippets.js, ...(parsed.js || {}) },
-        html: { ...defaultSnippets.html, ...(parsed.html || {}) },
-        css: { ...defaultSnippets.css, ...(parsed.css || {}) }
-      };
+      customSnippets = mergeSnippets(parsed);
       localStorage.setItem("sandbox_custom_snippets", JSON.stringify(customSnippets, null, 2));
     } else {
       localStorage.setItem("sandbox_custom_snippets", JSON.stringify(defaultSnippets, null, 2));
@@ -141,7 +145,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const btn = document.getElementById(tabId);
     if (!btn) return;
     if (typeof bootstrap !== 'undefined' && bootstrap.Tab) {
-      try { new bootstrap.Tab(btn).show(); return; } catch (e) { /* manual fallback neeche */ }
+      try { new bootstrap.Tab(btn).show(); return; } catch (e) { /* manual fallback below */ }
     }
     document.querySelectorAll('#sandboxTabs .nav-link').forEach((el) => el.classList.remove('active'));
     btn.classList.add('active');
@@ -1689,7 +1693,7 @@ document.addEventListener("DOMContentLoaded", () => {
       showEditorTab("js-tab", "js-pane");
 
       if (window.jsEditor) {
-        // Backup JS before replacing it with snippets JSON. setValue triggers preview save, so without this the JS is lost. Skip backup if snippets JSON is already open.
+        // Backup JS first; skip if snippets JSON is already open.
         try {
           const _curJs = window.jsEditor.getValue();
           let _isSnippetsJson = false;
@@ -1715,9 +1719,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
       try {
         let parsed = JSON.parse(editorContent);
-        customSnippets = parsed;
-        localStorage.setItem("sandbox_custom_snippets", JSON.stringify(parsed, null, 2));
-        // Restore backed-up JS, otherwise the editor keeps showing snippets JSON.
+        customSnippets = mergeSnippets(parsed);
+        localStorage.setItem("sandbox_custom_snippets", JSON.stringify(customSnippets, null, 2));
+        // Restore backed-up JS.
         const _backup = window._snippetsJsBackup !== undefined ? window._snippetsJsBackup : localStorage.getItem("sandbox_js_backup_before_snippets");
         if (_backup !== null && _backup !== undefined) {
           window.jsEditor.setValue(_backup);
@@ -1744,8 +1748,8 @@ document.addEventListener("DOMContentLoaded", () => {
       reader.onload = (event) => {
         try {
           let parsed = JSON.parse(event.target.result);
-          customSnippets = parsed;
-          localStorage.setItem("sandbox_custom_snippets", JSON.stringify(parsed, null, 2));
+          customSnippets = mergeSnippets(parsed);
+          localStorage.setItem("sandbox_custom_snippets", JSON.stringify(customSnippets, null, 2));
           alert("Snippets file imported.");
         } catch (err) {
           alert("Invalid JSON file.");
@@ -1800,39 +1804,36 @@ document.addEventListener("DOMContentLoaded", () => {
     workspaceRow.classList.add("preview-on-top");
   }
 
+  // Splitter: guarded, handles swapped layout, releases on cancel.
   let isDragging = false;
-  splitter.addEventListener("pointerdown", (e) => {
-    isDragging = true;
-    splitter.setPointerCapture(e.pointerId);
-    e.preventDefault();
-  });
-
-  splitter.addEventListener("pointermove", (e) => {
-    if (!isDragging) return;
-    const rect = workspaceRow.getBoundingClientRect();
-    const currentY = e.clientY - rect.top;
-    let percentage = (currentY / rect.height) * 100;
-    if (percentage < 15) percentage = 15;
-    if (percentage > 85) percentage = 85;
-
-    editorSection.style.height = percentage + "%";
-    previewSection.style.height = (100 - percentage) + "%";
-
-    if (window.htmlEditor) window.htmlEditor.refresh();
-    if (window.cssEditor) window.cssEditor.refresh();
-    if (window.jsEditor) window.jsEditor.refresh();
-  });
-
-  splitter.addEventListener("pointerup", (e) => {
+  function stopDrag(e) {
     if (!isDragging) return;
     isDragging = false;
-    splitter.releasePointerCapture(e.pointerId);
-    setTimeout(() => {
+    try { splitter.releasePointerCapture(e.pointerId); } catch (err) {}
+    refreshEditors();
+  }
+  if (splitter && workspaceRow && editorSection && previewSection) {
+    splitter.addEventListener("pointerdown", (e) => {
+      isDragging = true;
+      try { splitter.setPointerCapture(e.pointerId); } catch (err) {}
+      e.preventDefault();
+    });
+    splitter.addEventListener("pointermove", (e) => {
+      if (!isDragging) return;
+      const rect = workspaceRow.getBoundingClientRect();
+      let percentage = ((e.clientY - rect.top) / rect.height) * 100;
+      percentage = Math.max(15, Math.min(85, percentage));
+      // Swapped layout: percentage measures the preview, not the editor.
+      const onTop = workspaceRow.classList.contains("preview-on-top");
+      editorSection.style.height = (onTop ? 100 - percentage : percentage) + "%";
+      previewSection.style.height = (onTop ? percentage : 100 - percentage) + "%";
       if (window.htmlEditor) window.htmlEditor.refresh();
       if (window.cssEditor) window.cssEditor.refresh();
       if (window.jsEditor) window.jsEditor.refresh();
-    }, 50);
-  });
+    });
+    splitter.addEventListener("pointerup", stopDrag);
+    splitter.addEventListener("pointercancel", stopDrag);
+  }
 
   const hamburgerBtn = document.getElementById("hamburger-btn");
   if (hamburgerBtn && workspaceRow) {
@@ -2251,7 +2252,10 @@ document.addEventListener("DOMContentLoaded", () => {
       };
       try {
         const jsonStr = JSON.stringify(payload);
-        const base64 = btoa(unescape(encodeURIComponent(jsonStr)));
+        const bytes = new TextEncoder().encode(jsonStr);
+        let bin = "";
+        bytes.forEach((b) => (bin += String.fromCharCode(b)));
+        const base64 = btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
         const shareUrl = window.location.origin + window.location.pathname + '#code=' + base64;
         navigator.clipboard.writeText(shareUrl).then(() => {
           alert("Share link copied.");
@@ -2281,11 +2285,11 @@ document.addEventListener("DOMContentLoaded", () => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Exported Sandbox Project</title>
   ${frameworkCDNTag}
-  <style>${cssCode}</style>
+  <style>${cssCode.replace(/<\/style>/gi, '<\\/style>')}</style>
 </head>
 <body>
   ${htmlCode}
-  <script>${jsCode}</script>
+  <script>${jsCode.replace(/<\/script>/gi, '<\\/script>')}</script>
 </body>
 </html>`;
 
@@ -2402,7 +2406,7 @@ document.addEventListener("DOMContentLoaded", () => {
     },
     {
       id: "expand-all-css-emmet",
-      title: "Expand All CSS Emmet in File (Ek Baar Me Full)",
+      title: "Expand All CSS Emmet in File",
       category: "Editor",
       shortcut: "Ctrl + Shift + E",
       action: () => {
@@ -3126,7 +3130,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  const currentVersion = "1.6.0";
+  const currentVersion = "1.6.1";
   const menuJsonExportBtn = document.getElementById("menu-json-export-btn");
   if (menuJsonExportBtn) {
     menuJsonExportBtn.addEventListener("click", () => {
@@ -3175,9 +3179,9 @@ document.addEventListener("DOMContentLoaded", () => {
       reader.onload = (event) => {
         try {
           const data = JSON.parse(event.target.result);
-          if (data.html !== undefined) window.htmlEditor.setValue(data.html);
-          if (data.css !== undefined) window.cssEditor.setValue(data.css);
-          if (data.js !== undefined) window.jsEditor.setValue(data.js);
+          if (typeof data.html === "string") window.htmlEditor.setValue(data.html);
+          if (typeof data.css === "string") window.cssEditor.setValue(data.css);
+          if (typeof data.js === "string") window.jsEditor.setValue(data.js);
           if (data.snippets !== undefined) {
             customSnippets = {
               js: { ...defaultSnippets.js, ...(data.snippets.js || {}) },
@@ -3226,11 +3230,11 @@ document.addEventListener("DOMContentLoaded", () => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>View Source - Sandbox Project</title>
   ${frameworkCDNTag}
-  <style>${cssCode}</style>
+  <style>${cssCode.replace(/<\/style>/gi, '<\\/style>')}</style>
 </head>
 <body>
   ${htmlCode}
-  <script>${jsCode}</script>
+  <script>${jsCode.replace(/<\/script>/gi, '<\\/script>')}</script>
 </body>
 </html>`;
       const blob = new Blob([fullSourceDocument], { type: 'text/plain;charset=utf-8' });
@@ -3240,7 +3244,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   const menuExportBtn = document.getElementById("menu-export-btn");
-  if (menuExportBtn) menuExportBtn.addEventListener("click", () => headerDownloadBtn.click());
+  if (menuExportBtn) menuExportBtn.addEventListener("click", () => headerDownloadBtn?.click());
 
   const menuFormatBtn = document.getElementById("menu-format-btn");
   if (menuFormatBtn) menuFormatBtn.addEventListener("click", formatCurrentEditor);
@@ -3338,9 +3342,27 @@ document.addEventListener("DOMContentLoaded", () => {
   const consoleClearBtn = document.getElementById("console-clear-btn");
   if (consoleClearBtn) consoleClearBtn.addEventListener("click", window.clearConsole);
 
+  // Accept logs only from the preview iframe.
   window.addEventListener("message", (event) => {
+    const iframe = document.getElementById("output");
+    if (!iframe || event.source !== iframe.contentWindow) return;
     if (event.data && event.data.type === "CONSOLE_LOG") {
       window.appendLog(event.data.level, event.data.message);
+    }
+    // Preview storage sync: save in parent storage, persists across rebuilds.
+    if (event.data && event.data.type === "SANDBOX_STORAGE_SYNC") {
+      try {
+        var key = "sandbox_preview_" + event.data.store + "Storage";
+        var val = JSON.stringify(event.data.data || {});
+        if (event.data.store === "local") localStorage.setItem(key, val);
+        else sessionStorage.setItem(key, val);
+      } catch (e) {}
+    }
+    // Preview cookie sync: save in parent storage, persists across rebuilds.
+    if (event.data && event.data.type === "SANDBOX_COOKIE_SYNC") {
+      try {
+        localStorage.setItem("sandbox_preview_cookies", JSON.stringify(event.data.data || {}));
+      } catch (e) {}
     }
   });
 
@@ -3350,9 +3372,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const cssCode = window.cssEditor.getValue();
     const jsCode = window.jsEditor.getValue();
     
-    localStorage.setItem("sandbox_html", htmlCode);
-    localStorage.setItem("sandbox_css", cssCode);
-    localStorage.setItem("sandbox_js", jsCode);
+    // Quota error must not kill the preview.
+    try {
+      localStorage.setItem("sandbox_html", htmlCode);
+      localStorage.setItem("sandbox_css", cssCode);
+      localStorage.setItem("sandbox_js", jsCode);
+    } catch (e) {}
 
     const iframe = document.getElementById("output");
     if (!iframe) return;
@@ -3360,11 +3385,27 @@ document.addEventListener("DOMContentLoaded", () => {
     window.clearConsole();
     const framework = localStorage.getItem("sandbox_framework") || "none";
     const frameworkCDNTag = getFrameworkCDN(framework);
-    // Eruda: inject inside the iframe when enabled in Settings.
+    // Storage shim: sandboxed preview blocks localStorage, Eruda + user code need it.
+    // Persist: preview syncs to parent storage, parent re-injects on rebuild.
+    // In-memory fallback, only used when real storage throws. Runs first in HEAD.
+    // Saved preview storage: persist across rebuilds (parent has real origin).
+    const savedLocalData = (() => { try { return JSON.parse(localStorage.getItem("sandbox_preview_localStorage") || "{}") || {}; } catch (e) { return {}; } })();
+    const savedSessionData = (() => { try { return JSON.parse(sessionStorage.getItem("sandbox_preview_sessionStorage") || "{}") || {}; } catch (e) { return {}; } })();
+    const savedLocalJSON = JSON.stringify(savedLocalData).replace(/<\/script>/gi, "<\\/script>");
+    const savedSessionJSON = JSON.stringify(savedSessionData).replace(/<\/script>/gi, "<\\/script>");
+    // Saved preview cookies: drop expired ones, persist rest across rebuilds.
+    const savedCookiesData = (() => { try { var raw = JSON.parse(localStorage.getItem("sandbox_preview_cookies") || "{}") || {}; var now = Date.now(); var out = {}; Object.keys(raw).forEach(function(k){ if(!raw[k] || !raw[k].expires || raw[k].expires > now) out[k] = raw[k]; }); return out; } catch (e) { return {}; } })();
+    const savedCookiesJSON = JSON.stringify(savedCookiesData).replace(/<\/script>/gi, "<\\/script>");
+    const storageShimTag = '<script>(function(){function s(init,store){var d={};var o={};function sync(){try{window.parent.postMessage({type:\"SANDBOX_STORAGE_SYNC\",store:store,data:d},\"*\");}catch(e){}}function isMethod(k){return k===\"getItem\"||k===\"setItem\"||k===\"removeItem\"||k===\"clear\"||k===\"key\"||k===\"length\";}function setOwn(k,v){if(isMethod(k))return;try{Object.defineProperty(o,k,{value:v,configurable:true,enumerable:true,writable:true});}catch(e){}}function delOwn(k){if(isMethod(k))return;try{delete o[k];}catch(e){}}function get(k){try{k=String(k);return Object.prototype.hasOwnProperty.call(d,k)?d[k]:null;}catch(e){return null;}}function set(k,v){try{k=String(k);v=String(v);d[k]=v;setOwn(k,v);sync();}catch(e){}}function rem(k){try{k=String(k);if(Object.prototype.hasOwnProperty.call(d,k)){delete d[k];delOwn(k);sync();}}catch(e){}}function clr(){try{var ks=Object.keys(d);for(var i=0;i<ks.length;i++){delete d[ks[i]];delOwn(ks[i]);}sync();}catch(e){}}function keyFn(i){try{return Object.keys(d)[i]||null;}catch(e){return null;}}Object.defineProperty(o,\"getItem\",{value:get,configurable:true,enumerable:false,writable:true});Object.defineProperty(o,\"setItem\",{value:set,configurable:true,enumerable:false,writable:true});Object.defineProperty(o,\"removeItem\",{value:rem,configurable:true,enumerable:false,writable:true});Object.defineProperty(o,\"clear\",{value:clr,configurable:true,enumerable:false,writable:true});Object.defineProperty(o,\"key\",{value:keyFn,configurable:true,enumerable:false,writable:true});Object.defineProperty(o,\"length\",{get:function(){return Object.keys(d).length;},configurable:true,enumerable:false});try{var initObj=init||{};Object.keys(initObj).forEach(function(k){d[k]=String(initObj[k]);setOwn(k,d[k]);});}catch(e){}return o;}var __savedLocal=' + savedLocalJSON + ';var __savedSession=' + savedSessionJSON + ';function install(n,shim){try{Object.defineProperty(window,n,{value:shim,configurable:true,writable:true});return;}catch(e){}try{window[n]=shim;if(window[n]===shim)return;}catch(e){}try{Object.defineProperty(Window.prototype,n,{get:function(){return shim;},configurable:true});}catch(e){}}install(\"localStorage\",s(__savedLocal,\"local\"));install(\"sessionStorage\",s(__savedSession,\"session\"));})();(function(){try{var d=Object.getOwnPropertyDescriptor(CSSStyleSheet.prototype,\"cssRules\");if(d&&d.get){Object.defineProperty(CSSStyleSheet.prototype,\"cssRules\",{get:function(){try{return d.get.call(this);}catch(e){return [];}},configurable:true});}}catch(e){}try{var d2=Object.getOwnPropertyDescriptor(HTMLIFrameElement.prototype,\"contentDocument\");if(d2&&d2.get){Object.defineProperty(HTMLIFrameElement.prototype,\"contentDocument\",{get:function(){try{return d2.get.call(this);}catch(e){return null;}},configurable:true});}}catch(e){}})();(function(){var __savedCookies=' + savedCookiesJSON + ';var __store=__savedCookies||{};function isExp(c){return c&&c.expires&&Date.now()>c.expires;}function clean(){Object.keys(__store).forEach(function(k){if(isExp(__store[k]))delete __store[k];});}function sync(){try{window.parent.postMessage({type:\"SANDBOX_COOKIE_SYNC\",data:__store},\"*\");}catch(e){}}function getC(){clean();var p=[];Object.keys(__store).forEach(function(k){p.push(k+\"=\"+__store[k].value);});return p.join(\"; \");}function setC(str){try{str=String(str);var parts=str.split(\";\");var first=parts[0].split(\"=\");var name=(first[0]||\"\").trim();if(!name)return;var value=first.slice(1).join(\"=\").trim();var attrs={};for(var i=1;i<parts.length;i++){var pp=parts[i].split(\"=\");var ak=(pp[0]||\"\").trim().toLowerCase();var av=pp.slice(1).join(\"=\").trim();if(ak)attrs[ak]=av;}var expires=null;if(attrs[\"max-age\"]!==undefined){var ma=parseInt(attrs[\"max-age\"],10);if(!isNaN(ma)){if(ma<=0){delete __store[name];sync();return;}expires=Date.now()+ma*1000;}}else if(attrs[\"expires\"]){var ed=Date.parse(attrs[\"expires\"]);if(!isNaN(ed))expires=ed;}if(expires&&Date.now()>expires){delete __store[name];sync();return;}__store[name]={value:value,expires:expires};sync();}catch(e){}}function install(obj){try{Object.defineProperty(obj,\"cookie\",{get:getC,set:setC,configurable:true,enumerable:true});}catch(e){}}install(Document.prototype);install(document);})();<\/script>';
+    // Eruda (local, offline): Eruda/eruda/eruda.js, no CDN.
+    // No sources, no settings: Eruda adds settings itself; sources not needed.
+    // Safe-access patch: cssRules / contentDocument must not throw, else Resources render stops.
+    // Cookie: full store (sandboxed doc throws on real cookie). Persists via parent.
+    // Local file = same-origin, real errors show without crossorigin.
+    // Resources refresh: Eruda sometimes skips refresh, force it twice (logs real error).
     const erudaEnabled = localStorage.getItem("sandbox_eruda") === "true";
-    // Eruda: both scripts go in HEAD, nothing in BODY. Inline script with defer does not defer, so init on DOMContentLoaded with retry.
-    const erudaScriptTag = erudaEnabled ? '<script src="https://cdn.jsdelivr.net/npm/eruda" defer><\/script>' : "";
-    const erudaInitTag = erudaEnabled ? '<script>window.addEventListener("DOMContentLoaded",function(){var t=0;function tryInit(){if(window.eruda){try{if(!window.__erudaInited){window.__erudaInited=true;eruda.init({tool:["console","elements","network","resources","info"]});}}catch(e){}}else if(t++<50){setTimeout(tryInit,100);}}tryInit();});<\/script>' : "";
+    const erudaScriptTag = erudaEnabled ? '<script src="Eruda/eruda/eruda.js"><\/script>' : "";
+    const erudaInitTag = erudaEnabled ? '<script>function __initEruda(){var t=0;function tryInit(){if(window.eruda){try{if(!window.__erudaInited){window.__erudaInited=true;eruda.init({tool:[\"console\",\"elements\",\"network\",\"resources\",\"info\"]});function __erudaResRefresh(){try{var r=eruda.get(\"resources\");if(r&&typeof r.refresh===\"function\"){r.refresh();}}catch(e){window.parent.postMessage({type:\"CONSOLE_LOG\",level:\"error\",message:\"Resources refresh failed: \"+(e&&e.message||e)},\"*\");}}setTimeout(__erudaResRefresh,1200);setTimeout(__erudaResRefresh,3500);}}catch(e){window.parent.postMessage({type:"CONSOLE_LOG",level:"error",message:"Eruda init failed: "+(e&&e.message||e)},"*");}}else if(t++<50){setTimeout(tryInit,100);}else{window.parent.postMessage({type:"CONSOLE_LOG",level:"error",message:"Eruda failed to load. Check network / ad-blocker."},"*");}}tryInit();}if(document.readyState==="loading"){window.addEventListener("DOMContentLoaded",__initEruda);}else{__initEruda();}<\/script>' : "";
 
     const safeJsCode = String(jsCode || "").replace(/<\/script>/gi, "<\\/script>");
     const combinedContent = `
@@ -3374,9 +3415,10 @@ document.addEventListener("DOMContentLoaded", () => {
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         ${frameworkCDNTag}
+        ${storageShimTag}
         ${erudaScriptTag}
         ${erudaInitTag}
-        <style>${cssCode}</style>
+        <style>${cssCode.replace(/<\/style>/gi, '<\\/style>')}</style>
         <script>
           function formatArg(arg) {
             if (arg === null) return 'null';
@@ -3397,8 +3439,9 @@ document.addEventListener("DOMContentLoaded", () => {
           console.error = function(...args) { origError.apply(console, args); sendLog('error', args); };
           console.warn = function(...args) { origWarn.apply(console, args); sendLog('warn', args); };
           console.info = function(...args) { origInfo.apply(console, args); sendLog('info', args); };
+          var __jsLineOffset = __SANDBOX_JS_LINE_OFFSET_9f3__;
           window.onerror = function(msg, url, line) {
-            sendLog('error', [msg + ' (Line: ' + (line || 1) + ')']);
+            sendLog('error', [msg + ' (Line: ' + Math.max(1, (line || 1) - __jsLineOffset + 1) + ')']);
             return true;
           };
           // User JS runs after DOM is ready so getElementById works. Shim DOMContentLoaded for late listeners.
@@ -3416,7 +3459,7 @@ document.addEventListener("DOMContentLoaded", () => {
             try {
               ${safeJsCode}
             } catch (err) {
-              console.error(err.message + ' (Line: 1)');
+              console.error(err.message);
             }
           });
         </script>
@@ -3426,7 +3469,13 @@ document.addEventListener("DOMContentLoaded", () => {
       </body>
       </html>
     `;
-    iframe.srcdoc = combinedContent;
+    // Map preview error lines back to user JS lines.
+    let fixedContent = combinedContent;
+    if (jsCode) {
+      const idx = combinedContent.indexOf(safeJsCode);
+      if (idx > 0) fixedContent = combinedContent.replace("__SANDBOX_JS_LINE_OFFSET_9f3__", String(combinedContent.slice(0, idx).split("\n").length));
+    }
+    iframe.srcdoc = fixedContent;
   }
 
   function triggerDebouncedUpdate() {
