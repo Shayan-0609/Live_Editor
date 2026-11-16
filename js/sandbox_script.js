@@ -1,5 +1,4 @@
 document.addEventListener("DOMContentLoaded", () => {
-  // 0. Handle URL Hash Code Sharing
   try {
     if (window.location.hash && window.location.hash.startsWith("#code=")) {
       const hashVal = window.location.hash.substring(6);
@@ -16,7 +15,6 @@ document.addEventListener("DOMContentLoaded", () => {
     console.error("Error loading shared code from URL hash:", e);
   }
 
-  // Load Saved Settings from LocalStorage
   const savedFontSize = localStorage.getItem("sandbox_font_size") || "14";
   const savedFontSetting = localStorage.getItem("sandbox_font_setting") || "monospace|normal";
   const savedFontLabel = localStorage.getItem("sandbox_font_label") || "Change Fonts";
@@ -31,8 +29,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const savedFramework = localStorage.getItem("sandbox_framework") || "none";
   const savedFrameworkLabel = localStorage.getItem("sandbox_framework_label") || "None (Vanilla CSS)";
   const savedPreviewOnTop = localStorage.getItem("sandbox_preview_on_top") === "true";
+  const savedEruda = localStorage.getItem("sandbox_eruda") === "true";
 
-  // --- DEFAULT CUSTOM SNIPPETS (JSON format with complete lorem scale) ---
   const defaultSnippets = {
     "js": {
       "clg": "console.log($1);",
@@ -44,6 +42,8 @@ document.addEventListener("DOMContentLoaded", () => {
       "t": "<tag>$1</tag>",
       "ul": "<ul>\n  <li>$1</li>\n</ul>",
       "btn": "<button class=\"btn btn-$1\">$2</button>",
+      "bt5": "<div class=\"container py-4\">\n  <div class=\"p-5 mb-4 bg-light rounded-3 shadow-sm\">\n    <div class=\"container-fluid py-3\">\n      <h1 class=\"display-5 fw-bold text-primary\">Bootstrap 5 Ready</h1>\n      <p class=\"col-md-8 fs-4\">Start building your responsive UI instantly.</p>\n      <button class=\"btn btn-dark btn-lg\" type=\"button\">Explore</button>\n    </div>\n  </div>\n</div>",
+      "tw": "<div class=\"min-h-screen bg-gray-50 flex items-center justify-center p-6\">\n  <div class=\"max-w-md w-full bg-white rounded-xl shadow-md p-8 space-y-4\">\n    <h1 class=\"text-2xl font-bold text-indigo-600\">Tailwind Ready</h1>\n    <p class=\"text-gray-600 text-sm\">Your utility-first playground is set up and ready to go.</p>\n    <button class=\"w-full py-2 px-4 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition\">Get Started</button>\n  </div>\n</div>",
       "lorem": "Lorem ipsum dolor sit, amet consectetur adipisicing elit. Tempora, saepe molestias! Fugiat fuga, fugit, distinctio culpa ad dignissimos commodi molestiae cumque odio magni ipsum placeat dolorum, eius totam quae dolore!",
       "lorem10": "Lorem ipsum dolor sit amet consectetur adipisicing elit. Quasi, illum.",
       "lorem20": "Lorem ipsum, dolor sit amet consectetur adipisicing elit. Ducimus fugiat quam natus a vitae neque, corporis at qui illo quo?",
@@ -54,11 +54,11 @@ document.addEventListener("DOMContentLoaded", () => {
     },
     "css": {
       "flex": "display: flex;\nalign-items: center;\njustify-content: center;",
-      "pos": "position: absolute;\ntop: 0;\nleft: 0;"
+      "pos": "position: absolute;\ntop: 0;\nleft: 0;",
+      "!": "/* Minimal CSS Reset & Modern Base */\n*,\n*::before,\n*::after {\n  box-sizing: border-box;\n}\n\n:root {\n  /* Comprehensive Modern Typography Stacks */\n  --font-sans-serif: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Noto Sans', 'Helvetica Neue', Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';\n  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace, 'Segoe UI Mono', 'Roboto Mono', 'Ubuntu Mono', 'Droid Sans Mono';\n  \n  /* Theme Base Variables */\n  --bg-surface: #fafbfc;\n  --text-primary: #222222;\n}\n\nhtml {\n  font-smooth: always;\n  -webkit-font-smoothing: antialiased;\n  -moz-osx-font-smoothing: grayscale;\n  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);\n  -webkit-text-size-adjust: 100%;\n}\n\nbody {\n  margin: 0;\n  font-family: var(--font-sans-serif);\n  background: var(--bg-surface);\n  color: var(--text-primary);\n  min-height: 100vh;\n  min-height: 100dvh;\n  font-size: 1rem;\n  font-weight: 400;\n  line-height: 1.5;\n  text-align: start;\n}"
     }
   };
 
-  // Load user snippets and merge with defaults so new keys (lorem scale) are automatically included
   let customSnippets = JSON.parse(JSON.stringify(defaultSnippets));
   try {
     const savedSnippets = localStorage.getItem("sandbox_custom_snippets");
@@ -77,7 +77,6 @@ document.addEventListener("DOMContentLoaded", () => {
     console.error("Error loading custom snippets:", err);
   }
 
-  // Sync UI controls with saved settings on startup
   const fontSizeRange = document.getElementById("fontSizeRange");
   const fontSizeBadge = document.getElementById("fontSizeBadge");
   if (fontSizeRange && fontSizeBadge) {
@@ -110,6 +109,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const lineNumToggle = document.getElementById("lineNumToggle");
   if (lineNumToggle) lineNumToggle.checked = savedLineNums;
 
+  // Eruda toggle lives in HTML.
+  const erudaToggle = document.getElementById("erudaToggle");
+  if (erudaToggle) erudaToggle.checked = savedEruda;
+
   const ligaturesToggle = document.getElementById("ligaturesToggle");
 
   function supportsLigatures(fontFamily) {
@@ -133,6 +136,20 @@ document.addEventListener("DOMContentLoaded", () => {
     if (item.getAttribute('data-framework') === savedFramework) item.classList.add('active');
   });
 
+  // Safe tab helper: falls back if Bootstrap CDN fails.
+  function showEditorTab(tabId, paneId) {
+    const btn = document.getElementById(tabId);
+    if (!btn) return;
+    if (typeof bootstrap !== 'undefined' && bootstrap.Tab) {
+      try { new bootstrap.Tab(btn).show(); return; } catch (e) { /* manual fallback neeche */ }
+    }
+    document.querySelectorAll('#sandboxTabs .nav-link').forEach((el) => el.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('#sandboxTabContent .tab-pane').forEach((p) => p.classList.remove('show', 'active'));
+    const pane = document.getElementById(paneId);
+    if (pane) pane.classList.add('show', 'active');
+  }
+
   function getFrameworkCDN(fw) {
     if (fw === "bootstrap") {
       return `
@@ -147,7 +164,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return "";
   }
 
-  // 1. Initialize CodeMirror Editors
   window.htmlEditor = CodeMirror.fromTextArea(document.getElementById("html-code"), {
     mode: "htmlmixed",
     theme: savedTheme,
@@ -175,13 +191,398 @@ document.addEventListener("DOMContentLoaded", () => {
     tabSize: 2
   });
 
-  // --- ADVANCED JS & MULTI-LANGUAGE COMMENT TOGGLE ENGINE (v1.5.0) ---
+  if (!document.getElementById("sandbox-breadcrumb-style")) {
+    const st = document.createElement("style");
+    st.id = "sandbox-breadcrumb-style";
+    st.textContent = ".sandbox-breadcrumb{display:flex;align-items:center;gap:4px;padding:5px 10px;background:#1e1e2e;border-bottom:1px solid #333;overflow-x:auto;white-space:nowrap;font-size:12px;font-family:ui-monospace,Menlo,Consolas,monospace;scrollbar-width:none}.sandbox-breadcrumb::-webkit-scrollbar{display:none}.sandbox-crumb-file{color:#9ad1ff;font-weight:700;flex-shrink:0}.sandbox-crumb{color:#d0d0d0;cursor:pointer;padding:2px 5px;border-radius:4px;flex-shrink:0}.sandbox-crumb:hover{background:#33334a;color:#fff}.sandbox-crumb.active{color:#ffd479;font-weight:600;background:#2a2a3a}.sandbox-crumb-sep{color:#666;flex-shrink:0}.sandbox-crumb-empty{color:#888}.sandbox-fold-widget{color:#9ad1ff;background:#2a2a3a;border:1px solid #3a3a5a;border-radius:4px;padding:0 6px;margin:0 2px;font-size:11px;cursor:pointer}.sandbox-fold-widget:hover{background:#3a3a5a}.sandbox-fold-marker{color:#888;cursor:pointer;font-size:10px;line-height:1;display:inline-block;width:14px;text-align:center}.sandbox-fold-marker:hover{color:#fff}.sandbox-fold-marker.folded{color:#ffd479}.CodeMirror-gutter.sandbox-fold-gutter{width:16px}.sandbox-breadcrumb-toggle{margin-left:auto;flex-shrink:0;background:transparent;border:1px solid #444;color:#aaa;border-radius:4px;font-size:11px;padding:1px 6px;cursor:pointer}.sandbox-breadcrumb-toggle:hover{color:#fff;border-color:#777}";
+    document.head.appendChild(st);
+  }
+  let breadcrumbEl = null;
+  function ensureBreadcrumbEl() {
+    if (breadcrumbEl) return breadcrumbEl;
+    const tabs = document.getElementById("sandboxTabs");
+    const bar = document.createElement("div");
+    bar.className = "sandbox-breadcrumb";
+    bar.id = "sandbox-breadcrumb";
+    bar.innerHTML = '<span class="sandbox-crumb-file">index.html</span><span class="sandbox-crumb-sep">›</span><span class="sandbox-crumb-empty">No selection</span>';
+    if (tabs && tabs.parentNode) {
+      tabs.parentNode.insertBefore(bar, tabs.nextSibling);
+    } else {
+      const es = document.getElementById("editor-section");
+      if (es) es.insertBefore(bar, es.firstChild);
+      else document.body.appendChild(bar);
+    }
+    breadcrumbEl = bar;
+    return bar;
+  }
+  function getHtmlCrumbs(cm, cursorLine, cursorCh) {
+    const voidTags = new Set(["area","base","br","col","embed","hr","img","input","link","meta","param","source","track","wbr"]);
+    const stack = [];
+    for (let ln = 0; ln <= cursorLine; ln++) {
+      let line = cm.getLine(ln) || "";
+      if (ln === cursorLine) line = line.slice(0, cursorCh);
+      line = line.replace(/<!--.*?-->/g, "");
+      const tagRe = /<\/?([a-zA-Z][a-zA-Z0-9-]*)(\s[^>]*?)?(\/?)>/g;
+      let m;
+      while ((m = tagRe.exec(line)) !== null) {
+        const full = m[0];
+        const tag = m[1].toLowerCase();
+        const isClosing = full.startsWith("</");
+        const isSelf = full.endsWith("/>") || voidTags.has(tag);
+        if (isClosing) {
+          for (let i = stack.length - 1; i >= 0; i--) {
+            if (stack[i].tag === tag) { stack.length = i; break; }
+          }
+        } else if (!isSelf) {
+          let label = tag;
+          const attrs = m[2] || "";
+          const idM = attrs.match(/\bid\s*=\s*["']([^"']+)["']/);
+          const classM = attrs.match(/\bclass\s*=\s*["']([^"']+)["']/);
+          if (idM) label += "#" + idM[1].split(/\s+/)[0];
+          else if (classM) label += "." + classM[1].split(/\s+/)[0];
+          stack.push({ tag, label, line: ln });
+        }
+      }
+    }
+    return stack;
+  }
+  function getCssCrumbs(cm, cursorLine, cursorCh) {
+    const stack = [];
+    let depth = 0;
+    for (let ln = 0; ln <= cursorLine; ln++) {
+      let raw = cm.getLine(ln) || "";
+      let line = ln === cursorLine ? raw.slice(0, cursorCh) : raw;
+      let stripped = line.replace(/\/\*.*?\*\//g, "");
+      let open = (stripped.match(/\{/g) || []).length;
+      let close = (stripped.match(/\}/g) || []).length;
+      if (open > 0) {
+        let before = line.split("{")[0];
+        let sel = before.split("}").pop().trim();
+        // A property line has ';', a selector does not.
+        if (sel && !sel.includes(";")) {
+          // Skip "color: red" style lines. Selectors may have ':' (a:hover), but never ';'.
+          stack.push({ label: sel, line: ln, depth });
+        }
+      }
+      depth += open - close;
+      if (depth < 0) depth = 0;
+      while (stack.length > 0 && depth <= stack[stack.length - 1].depth) stack.pop();
+    }
+    return stack;
+  }
+  function getJsCrumbs(cm, cursorLine, cursorCh) {
+    const stack = [];
+    let depth = 0;
+    for (let ln = 0; ln <= cursorLine; ln++) {
+      let raw = cm.getLine(ln) || "";
+      let line = ln === cursorLine ? raw.slice(0, cursorCh) : raw;
+      let label = null;
+      let m;
+      if ((m = line.match(/^\s*(?:export\s+)?(?:default\s+)?class\s+([A-Za-z_$][\w$]*)/))) label = "class " + m[1];
+      else if ((m = line.match(/^\s*(?:export\s+)?(?:async\s+)?function\s*\*?\s*([A-Za-z_$][\w$]*)/))) label = m[1] + "()";
+      else if ((m = line.match(/^\s*(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:function\b|\(.*?\)\s*=>|[A-Za-z_$][\w$]*\s*=>)/))) label = m[1] + "()";
+      else if ((m = line.match(/^\s*(?:async\s+)?([A-Za-z_$][\w$]*)\s*\(.*?\)\s*=>\s*\{/))) label = m[1] + "()";
+      else if ((m = line.match(/^\s*([A-Za-z_$][\w$]*)\s*\([^)]*\)\s*\{/))) {
+        const kw = m[1];
+        if (!["if","for","while","switch","catch","else","return","forEach"].includes(kw)) label = kw + "()";
+      }
+      let stripped = line.replace(/\/\*.*?\*\//g, "").replace(/"([^"\\]|\\.)*"/g, '""').replace(/'([^'\\]|\\.)*'/g, "''").replace(/`([^`\\]|\\.)*`/g, "``").replace(/\/\/.*$/, "");
+      let open = (stripped.match(/\{/g) || []).length;
+      let close = (stripped.match(/\}/g) || []).length;
+      if (label && open > 0) stack.push({ label, line: ln, depth });
+      depth += open - close;
+      if (depth < 0) depth = 0;
+      while (stack.length > 0 && depth <= stack[stack.length - 1].depth) stack.pop();
+    }
+    return stack;
+  }
+  function updateBreadcrumb() {
+    try {
+      const bar = ensureBreadcrumbEl();
+      const activeTab = document.querySelector('#sandboxTabs .nav-link.active');
+      if (!activeTab) { bar.style.display = "none"; return; }
+      // Hide breadcrumb on Log tab.
+      const tabId = (activeTab.id || "").toLowerCase();
+      const tabText = (activeTab.textContent || "").toLowerCase();
+      const isEditorTab = tabId === "html-tab" || tabId === "css-tab" || tabId === "js-tab";
+      const isLogTab = tabId.includes("log") || tabId.includes("console") || tabText.includes("log") || tabText.includes("console");
+      if (!isEditorTab || isLogTab) { bar.style.display = "none"; return; }
+      // Also hide it when a separate log pane is open.
+      const logPane = document.querySelector('#log-pane.show.active, #console-pane.show.active, #logs-pane.show.active, #js-console-pane.show.active, #output-pane.show.active');
+      if (logPane) { bar.style.display = "none"; return; }
+      bar.style.display = "flex";
+      let editor = null, mode = null, fileName = "index.html";
+      if (activeTab.id === "html-tab") { editor = window.htmlEditor; mode = "htmlmixed"; fileName = "index.html"; }
+      else if (activeTab.id === "css-tab") { editor = window.cssEditor; mode = "css"; fileName = "style.css"; }
+      else if (activeTab.id === "js-tab") { editor = window.jsEditor; mode = "javascript"; fileName = "script.js"; }
+      if (!editor) { bar.style.display = "none"; return; }
+      const cur = editor.getCursor();
+      let crumbs = [];
+      if (mode === "htmlmixed") crumbs = getHtmlCrumbs(editor, cur.line, cur.ch);
+      else if (mode === "css") crumbs = getCssCrumbs(editor, cur.line, cur.ch);
+      else crumbs = getJsCrumbs(editor, cur.line, cur.ch);
+      let html = '<span class="sandbox-crumb-file">' + fileName + '</span>';
+      if (crumbs.length === 0) {
+        html += '<span class="sandbox-crumb-sep">›</span><span class="sandbox-crumb-empty">Line ' + (cur.line + 1) + '</span>';
+      } else {
+        crumbs.forEach((c, idx) => {
+          html += '<span class="sandbox-crumb-sep">›</span>';
+          const isLast = idx === crumbs.length - 1;
+          html += '<span class="sandbox-crumb' + (isLast ? ' active' : '') + '" data-line="' + c.line + '">' + c.label.replace(/</g, "&lt;") + '</span>';
+        });
+      }
+      bar.innerHTML = html;
+      bar.querySelectorAll(".sandbox-crumb[data-line]").forEach((el) => {
+        el.addEventListener("click", () => {
+          const ln = parseInt(el.getAttribute("data-line"), 10);
+          if (!isNaN(ln)) {
+            editor.setCursor({ line: ln, ch: 0 });
+            editor.focus();
+            editor.scrollIntoView({ line: ln, ch: 0 }, 100);
+          }
+        });
+      });
+    } catch (e) {}
+  }
+  function setupBreadcrumbForEditor(cm) {
+    if (!cm) return;
+    cm.on("cursorActivity", () => updateBreadcrumb());
+    cm.on("change", () => updateBreadcrumb());
+  }
+  // Custom folding, no CodeMirror addon needed.
+  const foldMarksByEditor = new WeakMap();
+  function getFoldMarks(cm) {
+    if (!foldMarksByEditor.has(cm)) foldMarksByEditor.set(cm, []);
+    return foldMarksByEditor.get(cm);
+  }
+  function findBraceFoldRange(cm, line) {
+    const text = cm.getLine(line) || "";
+    const braceIdx = text.indexOf("{");
+    if (braceIdx === -1) return null;
+    let depth = 0;
+    for (let ln = line; ln < cm.lineCount(); ln++) {
+      let l = cm.getLine(ln) || "";
+      let stripped = l.replace(/"([^"\\]|\\.)*"/g, '""').replace(/'([^'\\]|\\.)*'/g, "''").replace(/`([^`\\]|\\.)*`/g, "``").replace(/\/\/.*$/, "");
+      let startIdx = (ln === line) ? braceIdx : 0;
+      for (let i = startIdx; i < stripped.length; i++) {
+        if (stripped[i] === "{") depth++;
+        else if (stripped[i] === "}") {
+          depth--;
+          if (depth === 0) {
+            if (ln === line) return null;
+            return { from: { line, ch: braceIdx + 1 }, to: { line: ln, ch: i }, startLine: line, endLine: ln };
+          }
+        }
+      }
+    }
+    return null;
+  }
+  function findHtmlFoldRange(cm, line) {
+    const text = cm.getLine(line) || "";
+    const m = text.match(/<([a-zA-Z][a-zA-Z0-9-]*)(\s[^>]*?)?>/);
+    if (!m) return null;
+    const tag = m[1].toLowerCase();
+    const voidTags = new Set(["area","base","br","col","embed","hr","img","input","link","meta","param","source","track","wbr"]);
+    if (voidTags.has(tag)) return null;
+    if (m[0].endsWith("/>")) return null;
+    let depth = 0;
+    for (let ln = line; ln < cm.lineCount(); ln++) {
+      let l = cm.getLine(ln) || "";
+      l = l.replace(/<!--.*?-->/g, "");
+      const re = new RegExp("</?" + tag + "(\\s[^>]*?)?>", "g");
+      let mm;
+      while ((mm = re.exec(l)) !== null) {
+        if (ln === line && mm.index < m.index) continue;
+        const isClosing = mm[0].startsWith("</");
+        const isSelf = mm[0].endsWith("/>") || voidTags.has(tag);
+        if (isSelf) continue;
+        if (isClosing) {
+          depth--;
+          if (depth === 0) {
+            if (ln === line) return null;
+            return { from: { line, ch: m.index + m[0].length }, to: { line: ln, ch: mm.index }, startLine: line, endLine: ln };
+          }
+        } else {
+          depth++;
+        }
+      }
+    }
+    return null;
+  }
+  function findCommentFoldRange(cm, line) {
+    const text = cm.getLine(line) || "";
+    let startIdx = text.indexOf("/*");
+    let isHtmlComment = false;
+    if (startIdx === -1 && text.includes("<!--")) { startIdx = text.indexOf("<!--"); isHtmlComment = true; }
+    if (startIdx === -1) return null;
+    if (!isHtmlComment && text.indexOf("*/", startIdx + 2) !== -1) return null;
+    if (isHtmlComment && text.indexOf("-->", startIdx + 4) !== -1) return null;
+    for (let ln = line + 1; ln < cm.lineCount(); ln++) {
+      let l = cm.getLine(ln) || "";
+      if (!isHtmlComment) {
+        let endIdx = l.indexOf("*/");
+        if (endIdx !== -1) return { from: { line, ch: startIdx + 2 }, to: { line: ln, ch: endIdx }, startLine: line, endLine: ln };
+      } else {
+        let endIdx = l.indexOf("-->");
+        if (endIdx !== -1) return { from: { line, ch: startIdx + 4 }, to: { line: ln, ch: endIdx }, startLine: line, endLine: ln };
+      }
+    }
+    return null;
+  }
+  function findFoldRange(cm, line, mode) {
+    if (mode === "htmlmixed" || mode === "html") {
+      const h = findHtmlFoldRange(cm, line);
+      if (h) return h;
+      const b = findBraceFoldRange(cm, line);
+      if (b) return b;
+      return findCommentFoldRange(cm, line);
+    }
+    const b2 = findBraceFoldRange(cm, line);
+    if (b2) return b2;
+    return findCommentFoldRange(cm, line);
+  }
+  function isFoldedAtLine(cm, line) {
+    const marks = getFoldMarks(cm);
+    return marks.some((mm) => mm._foldStartLine === line);
+  }
+  function foldLine(cm, line, mode) {
+    if (isFoldedAtLine(cm, line)) return false;
+    const range = findFoldRange(cm, line, mode);
+    if (!range) return false;
+    const widget = document.createElement("span");
+    widget.className = "sandbox-fold-widget";
+    const hidden = range.endLine - range.startLine;
+    widget.textContent = "… " + hidden + " lines …";
+    widget.title = "Click to unfold";
+    widget.addEventListener("click", (e) => { e.stopPropagation(); unfoldLine(cm, line); refreshFoldGutter(cm, mode); });
+    const mark = cm.markText(range.from, range.to, { collapsed: true, inclusiveLeft: false, inclusiveRight: false, replacedWith: widget, clearWhenEmpty: false });
+    mark._foldStartLine = line;
+    mark._foldRange = range;
+    try {
+      mark.on("clear", () => {
+        const arr = getFoldMarks(cm);
+        const i = arr.indexOf(mark);
+        if (i !== -1) arr.splice(i, 1);
+        setTimeout(() => refreshFoldGutter(cm, mode), 50);
+      });
+    } catch (e) {}
+    getFoldMarks(cm).push(mark);
+    return true;
+  }
+  function unfoldLine(cm, line) {
+    const marks = getFoldMarks(cm);
+    for (let i = marks.length - 1; i >= 0; i--) {
+      if (marks[i]._foldStartLine === line) {
+        try { marks[i].clear(); } catch (e) {}
+        marks.splice(i, 1);
+        return true;
+      }
+    }
+    return false;
+  }
+  function toggleFoldAtLine(cm, line, mode) {
+    if (isFoldedAtLine(cm, line)) unfoldLine(cm, line);
+    else foldLine(cm, line, mode);
+    refreshFoldGutter(cm, mode);
+  }
+  function refreshFoldGutter(cm, mode) {
+    if (!cm || !cm.setGutterMarker) return;
+    const total = cm.lineCount();
+    for (let ln = 0; ln < total; ln++) {
+      let marker = null;
+      if (isFoldedAtLine(cm, ln)) {
+        marker = document.createElement("span");
+        marker.className = "sandbox-fold-marker folded";
+        marker.textContent = "▶";
+        marker.title = "Unfold";
+      } else if (findFoldRange(cm, ln, mode)) {
+        marker = document.createElement("span");
+        marker.className = "sandbox-fold-marker";
+        marker.textContent = "▼";
+        marker.title = "Fold";
+      }
+      try { cm.setGutterMarker(ln, "sandbox-fold-gutter", marker); } catch (e) {}
+    }
+  }
+  function foldAtCursor(cm, mode) {
+    const cur = cm.getCursor();
+    toggleFoldAtLine(cm, cur.line, mode);
+  }
+  function unfoldAtCursor(cm, mode) {
+    const cur = cm.getCursor();
+    if (isFoldedAtLine(cm, cur.line)) { unfoldLine(cm, cur.line); refreshFoldGutter(cm, mode); return; }
+    const marks = [...getFoldMarks(cm)];
+    for (const mm of marks) {
+      const r = mm._foldRange;
+      if (r && cur.line >= r.startLine && cur.line <= r.endLine) { try { mm.clear(); } catch (e) {} }
+    }
+    refreshFoldGutter(cm, mode);
+  }
+  function foldAll(cm, mode) {
+    const total = cm.lineCount();
+    const foldedRanges = [];
+    for (let ln = 0; ln < total; ln++) {
+      let inside = false;
+      for (const r of foldedRanges) { if (ln > r.startLine && ln <= r.endLine) { inside = true; break; } }
+      if (inside) continue;
+      const range = findFoldRange(cm, ln, mode);
+      if (range) { if (foldLine(cm, ln, mode)) foldedRanges.push(range); }
+    }
+    refreshFoldGutter(cm, mode);
+  }
+  function unfoldAll(cm, mode) {
+    const marks = [...getFoldMarks(cm)];
+    for (const mm of marks) { try { mm.clear(); } catch (e) {} }
+    getFoldMarks(cm).length = 0;
+    refreshFoldGutter(cm, mode);
+  }
+  function setupFoldingForEditor(cm, mode) {
+    if (!cm) return;
+    try {
+      const cur = cm.getOption("gutters") || ["CodeMirror-linenumbers"];
+      if (!cur.includes("sandbox-fold-gutter")) cm.setOption("gutters", [...cur, "sandbox-fold-gutter"]);
+    } catch (e) {}
+    cm.on("gutterClick", (cm2, line, gutter) => {
+      if (gutter === "sandbox-fold-gutter") toggleFoldAtLine(cm2, line, mode);
+    });
+    const wrapper = cm.getWrapperElement && cm.getWrapperElement();
+    if (wrapper) {
+      wrapper.addEventListener("keydown", (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "[") { e.preventDefault(); foldAtCursor(cm, mode); }
+        else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "]") { e.preventDefault(); unfoldAtCursor(cm, mode); }
+        else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "0") { e.preventDefault(); foldAll(cm, mode); }
+        else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "9") { e.preventDefault(); unfoldAll(cm, mode); }
+      }, true);
+    }
+    let t = null;
+    cm.on("change", () => { clearTimeout(t); t = setTimeout(() => refreshFoldGutter(cm, mode), 300); });
+    setTimeout(() => refreshFoldGutter(cm, mode), 250);
+  }
+  setupBreadcrumbForEditor(window.htmlEditor);
+  setupBreadcrumbForEditor(window.cssEditor);
+  setupBreadcrumbForEditor(window.jsEditor);
+  setupFoldingForEditor(window.htmlEditor, "htmlmixed");
+  setupFoldingForEditor(window.cssEditor, "css");
+  setupFoldingForEditor(window.jsEditor, "javascript");
+  document.querySelectorAll('.nav-link').forEach((tab) => {
+    tab.addEventListener("click", () => setTimeout(() => updateBreadcrumb(), 50));
+  });
+  // Also listen to Bootstrap tab events so Log tab hides breadcrumb immediately.
+  document.addEventListener("shown.bs.tab", () => setTimeout(() => updateBreadcrumb(), 30));
+  document.addEventListener("click", (e) => {
+    const t = e.target && e.target.closest ? e.target.closest('.nav-link') : null;
+    if (t) setTimeout(() => updateBreadcrumb(), 60);
+  });
+  setTimeout(() => updateBreadcrumb(), 300);
+
+
+
   function toggleCustomComment() {
     const activeTab = document.querySelector('#sandboxTabs .nav-link.active');
     if (!activeTab) return;
     
     let editor = null;
-    let mode = 'js'; // 'js', 'css', 'html'
+    let mode = 'js';
     
     if (activeTab.id === 'html-tab') {
       editor = window.htmlEditor;
@@ -253,174 +654,384 @@ document.addEventListener("DOMContentLoaded", () => {
     editor.setCursor({ line: lineNum, ch: editor.getLine(lineNum).length });
   }
 
-  // --- EMMET & CUSTOM SNIPPET INTEGRATED ENGINE (Fixed for $) ---
+  // Emmet: parse to AST first (no numbering), then expand. Keeps nesting, ^ climb, groups and $ numbering correct.
+  const EMMET_SELF_CLOSING = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr'];
+  const EMMET_KNOWN_TAGS = new Set(['a','abbr','address','area','article','aside','audio','b','base','bdi','bdo','blockquote','body','br','button','canvas','caption','cite','code','col','colgroup','data','datalist','dd','del','details','dfn','dialog','div','dl','dt','em','embed','fieldset','figcaption','figure','footer','form','h1','h2','h3','h4','h5','h6','head','header','hgroup','hr','html','i','iframe','img','input','ins','kbd','label','legend','li','link','main','map','mark','menu','meta','meter','nav','noscript','object','ol','optgroup','option','output','p','picture','pre','progress','q','rp','rt','ruby','s','samp','script','search','section','select','small','source','span','strong','style','sub','summary','sup','table','tbody','td','template','textarea','tfoot','th','thead','time','title','tr','track','u','ul','var','video','wbr']);
+  const EMMET_LOREM_WORDS = ("lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua enim ad minim veniam quis nostrud exercitation ullamco laboris nisi aliquip ex ea commodo consequat duis aute irure in reprehenderit voluptate velit esse cillum fugiat nulla pariatur excepteur sint occaecat cupidatat non proident sunt culpa qui officia deserunt mollit anim id est laborum perspiciatis unde omnis iste natus error voluptatem accusantium doloremque laudantium totam rem aperiam eaque ab illo inventore veritatis quasi architecto beatae vitae dicta explicabo nemo enim ipsam voluptatem quia voluptas aspernatur odit aut fugit consequuntur magni dolores eos ratione sequi nesciunt neque porro quisquam numquam eius modi tempora incidunt magnam quaerat").split(" ");
+  function emmetLoremText(n) {
+    n = Math.max(1, n || 30);
+    let out = [];
+    for (let i = 0; i < n; i++) out.push(EMMET_LOREM_WORDS[i % EMMET_LOREM_WORDS.length]);
+    let txt = out.join(" ");
+    return txt.charAt(0).toUpperCase() + txt.slice(1);
+  }
+  function emmetSubstitute(template, index, total) {
+    if (template == null) return template;
+    return String(template).replace(/\$+(?:@(-)?(\d+)?)?(?!\d)/g, (match, minus, startNum) => {
+      let value;
+      const padMatch = match.match(/^\$+/);
+      const pad = padMatch ? padMatch[0].length : 1;
+      const hasAt = match.includes("@");
+      if (hasAt) {
+        if (minus) {
+          if (startNum !== undefined && startNum !== "") value = parseInt(startNum, 10) - index;
+          else value = total - index;
+        } else if (startNum !== undefined && startNum !== "") {
+          value = parseInt(startNum, 10) + index;
+        } else {
+          value = index + 1;
+        }
+      } else {
+        value = index + 1;
+      }
+      let s = String(value);
+      if (pad > 1) s = s.padStart(pad, "0");
+      return s;
+    });
+  }
+  function emmetCloneAST(node) {
+    if (!node) return node;
+    const copy = Object.assign({}, node);
+    if (node.classes) copy.classes = node.classes.slice();
+    if (node.attrs) copy.attrs = node.attrs.slice();
+    if (node.children) copy.children = node.children.map(emmetCloneAST);
+    return copy;
+  }
+  function emmetParseElementSegment(seg) {
+    seg = String(seg).trim();
+    if (!seg) return null;
+    let multiplier = 1;
+    const multMatch = seg.match(/\*(\d+)$/);
+    if (multMatch) {
+      multiplier = parseInt(multMatch[1], 10) || 1;
+      seg = seg.slice(0, -multMatch[0].length);
+    }
+    let textTemplate = "";
+    const contentMatch = seg.match(/\{([^\}]*)\}/);
+    if (contentMatch) {
+      textTemplate = contentMatch[1];
+      seg = seg.replace(contentMatch[0], "");
+    }
+    let attrs = [];
+    let attrScan = seg;
+    let outSeg = "";
+    let i = 0;
+    while (i < attrScan.length) {
+      if (attrScan[i] === "[") {
+        let depth = 1;
+        let inS = false, inD = false;
+        let j = i + 1;
+        while (j < attrScan.length && depth > 0) {
+          const c = attrScan[j];
+          if (inS) { if (c === "'" && attrScan[j - 1] !== "\\") inS = false; }
+          else if (inD) { if (c === '"' && attrScan[j - 1] !== "\\") inD = false; }
+          else if (c === "'") inS = true;
+          else if (c === '"') inD = true;
+          else if (c === "[") depth++;
+          else if (c === "]") depth--;
+          j++;
+        }
+        const inner = attrScan.slice(i + 1, j - 1).trim();
+        if (inner) {
+          // Quote unquoted attr value in single-attr case only, so multi-attr stays intact.
+          const _singleAttr = inner.match(/^([A-Za-z0-9\-_:.]+)=([^\s]+)$/);
+          if (_singleAttr && !_singleAttr[2].startsWith('"') && !_singleAttr[2].startsWith("'")) {
+            attrs.push(_singleAttr[1] + '="' + _singleAttr[2] + '"');
+          } else {
+            attrs.push(inner);
+          }
+        }
+        i = j;
+      } else {
+        outSeg += attrScan[i];
+        i++;
+      }
+    }
+    seg = outSeg;
+    let tagName = "div";
+    let idTemplate = "";
+    let classesTemplate = [];
+    let rest = seg.trim();
+    if (rest && !rest.startsWith(".") && !rest.startsWith("#") && !rest.startsWith("[")) {
+      const tagMatch = rest.match(/^([a-zA-Z][a-zA-Z0-9\-]*)/);
+      if (tagMatch) {
+        tagName = tagMatch[1];
+        rest = rest.slice(tagMatch[0].length);
+      }
+    }
+    // Short type forms: input:c -> checkbox, input:t -> text, input:p -> password.
+    if (rest.startsWith(":")) {
+      const typeMatch = rest.match(/^:([a-zA-Z0-9\-_]+)/);
+      if (typeMatch) {
+        const tRaw = typeMatch[1];
+        const _inputTypeMap = { c: 'checkbox', ch: 'checkbox', t: 'text', p: 'password', h: 'hidden', s: 'submit', r: 'radio', f: 'file', i: 'image', e: 'email', u: 'url', n: 'number', d: 'date', m: 'month', w: 'week', ti: 'time', dt: 'datetime-local', se: 'search', tel: 'tel', col: 'color', ra: 'range', b: 'button', re: 'reset', su: 'submit' };
+        const _btnTypeMap = { s: 'submit', r: 'reset', b: 'button' };
+        let t = tRaw;
+        const _low = tagName.toLowerCase();
+        if (_low === 'input' && _inputTypeMap[tRaw]) t = _inputTypeMap[tRaw];
+        else if (_low === 'button' && _btnTypeMap[tRaw]) t = _btnTypeMap[tRaw];
+        else if (_low === 'form' && (tRaw === 'g' || tRaw === 'get')) t = 'get';
+        else if (_low === 'form' && (tRaw === 'p' || tRaw === 'post')) t = 'post';
+        if (_low === "input" || _low === "button") attrs.push('type="' + t + '"');
+        else if (_low === "form") attrs.push('method="' + t + '"');
+        else attrs.push('type="' + t + '"');
+        rest = rest.slice(typeMatch[0].length);
+      }
+    }
+    let k = 0;
+    while (k < rest.length) {
+      const ch = rest[k];
+      if (ch === "#") {
+        k++;
+        const start = k;
+        while (k < rest.length && rest[k] !== "." && rest[k] !== "#" && rest[k] !== "[") k++;
+        idTemplate = rest.slice(start, k);
+      } else if (ch === ".") {
+        k++;
+        const start = k;
+        while (k < rest.length && rest[k] !== "." && rest[k] !== "#" && rest[k] !== "[") k++;
+        const cls = rest.slice(start, k);
+        if (cls) classesTemplate.push(cls);
+      } else {
+        k++;
+      }
+    }
+    // Common defaults: a -> href, img -> src/alt, input -> type=text. Do not duplicate existing attrs.
+    {
+      const _low2 = tagName.toLowerCase();
+      const _has = (prefix) => attrs.some((a) => a.startsWith(prefix));
+      if (_low2 === 'a' && !_has('href=')) attrs.push('href=""');
+      if (_low2 === 'img') { if (!_has('src=')) attrs.push('src=""'); if (!_has('alt=')) attrs.push('alt=""'); }
+      if (_low2 === 'input' && !_has('type=')) attrs.push('type="text"');
+    }
+    const lowTag = tagName.toLowerCase();
+    if (lowTag === "lorem" || /^lorem\d+$/.test(lowTag)) {
+      let n = 30;
+      if (lowTag !== "lorem") n = parseInt(lowTag.slice(5), 10) || 30;
+      return { type: "element", tagName: "__lorem__", isLorem: true, loremWords: n, idTemplate: "", classesTemplate: [], attrsTemplate: [], textTemplate: "", multiplier: multiplier, children: [] };
+    }
+    return { type: "element", tagName: tagName, idTemplate: idTemplate, classesTemplate: classesTemplate, attrsTemplate: attrs, textTemplate: textTemplate, multiplier: multiplier, children: [] };
+  }
+  function emmetMakeConcrete(astNode, index, total) {
+    if (astNode.isLorem) {
+      return { tagName: "__lorem__", isLorem: true, id: "", classes: [], attrs: [], textContent: emmetLoremText(astNode.loremWords || 30), isSelfClosing: false, children: [] };
+    }
+    return {
+      tagName: astNode.tagName,
+      id: emmetSubstitute(astNode.idTemplate || "", index, total),
+      classes: (astNode.classesTemplate || []).map((c) => emmetSubstitute(c, index, total)),
+      attrs: (astNode.attrsTemplate || []).map((a) => emmetSubstitute(a, index, total)),
+      textContent: emmetSubstitute(astNode.textTemplate || "", index, total),
+      isSelfClosing: EMMET_SELF_CLOSING.includes(String(astNode.tagName).toLowerCase()),
+      children: []
+    };
+  }
+  function emmetFlattenLoremChild(concrete) {
+    if (concrete.children.length === 1 && concrete.children[0].isLorem) {
+      const lt = concrete.children[0].textContent || "";
+      concrete.textContent = concrete.textContent ? concrete.textContent + " " + lt : lt;
+      concrete.children = [];
+    }
+  }
+  function emmetExpandAST(astNodes, parentIndex, parentTotal) {
+    const out = [];
+    const pIdx = (parentIndex == null ? 0 : parentIndex);
+    const pTotal = (parentTotal == null ? 1 : parentTotal);
+    for (const node of astNodes) {
+      if (node.type === "group") {
+        if (node.multiplier > 1) {
+          for (let idx = 0; idx < node.multiplier; idx++) {
+            const expanded = emmetExpandAST(node.children, idx, node.multiplier);
+            for (const e of expanded) out.push(e);
+          }
+        } else {
+          const expanded = emmetExpandAST(node.children, pIdx, pTotal);
+          for (const e of expanded) out.push(e);
+        }
+      } else {
+        if (node.multiplier > 1) {
+          for (let idx = 0; idx < node.multiplier; idx++) {
+            const concrete = emmetMakeConcrete(node, idx, node.multiplier);
+            concrete.children = emmetExpandAST(node.children, idx, node.multiplier);
+            emmetFlattenLoremChild(concrete);
+            out.push(concrete);
+          }
+        } else {
+          const concrete = emmetMakeConcrete(node, pIdx, pTotal);
+          concrete.children = emmetExpandAST(node.children, pIdx, pTotal);
+          emmetFlattenLoremChild(concrete);
+          out.push(concrete);
+        }
+      }
+    }
+    return out;
+  }
+  function emmetCollectLeaves(node) {
+    if (node.type === "group") {
+      let out = [];
+      for (const c of node.children) out.push(...emmetCollectLeaves(c));
+      return out;
+    }
+    if (!node.children || node.children.length === 0) return [node];
+    let out = [];
+    for (const c of node.children) out.push(...emmetCollectLeaves(c));
+    return out;
+  }
+  function emmetMaxDepth(node) {
+    if (node.type === "group") {
+      let m = 0;
+      for (const c of node.children) m = Math.max(m, emmetMaxDepth(c));
+      return m;
+    }
+    if (!node.children || node.children.length === 0) return 0;
+    let m = 0;
+    for (const c of node.children) m = Math.max(m, 1 + emmetMaxDepth(c));
+    return m;
+  }
+  function emmetParseToAST(input) {
+    const s = String(input).trim();
+    let pos = 0;
+    const len = s.length;
+    function skipSpaces() { while (pos < len && /\s/.test(s[pos])) pos++; }
+    function parseSequence() {
+      const root = [];
+      let stack = [];
+      let parents = [null];
+      let lastAppended = [];
+      let lastWasGroup = false;
+      let lastGroupDepth = 0;
+      while (true) {
+        skipSpaces();
+        if (pos >= len) break;
+        if (s[pos] === ")") break;
+        let unitNodes;
+        if (s[pos] === "(") {
+          pos++;
+          const inner = parseSequence();
+          if (s[pos] === ")") pos++;
+          skipSpaces();
+          let mult = 1;
+          if (s[pos] === "*" && pos + 1 < len && /\d/.test(s[pos + 1])) {
+            pos++;
+            let num = "";
+            while (pos < len && /\d/.test(s[pos])) { num += s[pos]; pos++; }
+            mult = parseInt(num, 10) || 1;
+          }
+          unitNodes = [{ type: "group", multiplier: mult, children: inner }];
+        } else {
+          const start = pos;
+          let square = 0, brace = 0;
+          let inSingle = false, inDouble = false;
+          while (pos < len) {
+            const ch = s[pos];
+            if (inSingle) { if (ch === "'" && s[pos - 1] !== "\\") inSingle = false; pos++; continue; }
+            if (inDouble) { if (ch === '"' && s[pos - 1] !== "\\") inDouble = false; pos++; continue; }
+            if (ch === "'" && (square > 0 || brace > 0)) { inSingle = true; pos++; continue; }
+            if (ch === '"' && (square > 0 || brace > 0)) { inDouble = true; pos++; continue; }
+            if (ch === "[") { square++; pos++; continue; }
+            if (ch === "]") { if (square > 0) square--; pos++; continue; }
+            if (ch === "{") { brace++; pos++; continue; }
+            if (ch === "}") { if (brace > 0) brace--; pos++; continue; }
+            if (square === 0 && brace === 0) {
+              if (ch === ">" || ch === "+" || ch === "^" || ch === ")" || ch === "(") break;
+            }
+            pos++;
+          }
+          const seg = s.slice(start, pos).trim();
+          if (!seg) break;
+          const el = emmetParseElementSegment(seg);
+          if (!el) break;
+          unitNodes = [el];
+        }
+        const appended = [];
+        for (const parent of parents) {
+          for (const u of unitNodes) {
+            const clone = emmetCloneAST(u);
+            if (parent === null) root.push(clone);
+            else parent.children.push(clone);
+            appended.push(clone);
+          }
+        }
+        const _isGroupUnit = unitNodes.length === 1 && unitNodes[0].type === "group";
+        const _groupDepth = _isGroupUnit ? emmetMaxDepth(unitNodes[0]) : 0;
+        let _leaves = [];
+        for (const a of appended) {
+          if (a.type === "group") _leaves.push(...emmetCollectLeaves(a));
+          else _leaves.push(a);
+        }
+        lastAppended = _leaves;
+        lastWasGroup = _isGroupUnit;
+        lastGroupDepth = _groupDepth;
+        skipSpaces();
+        if (pos >= len) break;
+        if (s[pos] === ")") break;
+        if (s[pos] === ">") { pos++; stack.push(parents); parents = lastAppended; continue; }
+        if (s[pos] === "+") { pos++; continue; }
+        if (s[pos] === "^") {
+          let cnt = 0;
+          while (pos < len && s[pos] === "^") { pos++; cnt++; }
+          let effective = cnt;
+          if (lastWasGroup) effective = Math.max(0, cnt - lastGroupDepth);
+          for (let q = 0; q < effective; q++) {
+            if (stack.length > 0) parents = stack.pop();
+            else parents = [null];
+          }
+          lastWasGroup = false;
+          lastGroupDepth = 0;
+          continue;
+        }
+        break;
+      }
+      return root;
+    }
+    return parseSequence();
+  }
   function splitByOperator(str, op) {
     let result = [];
     let current = "";
-    let depth = 0;
-    let inAttr = false;
-    let inContent = false;
-    
+    let square = 0, brace = 0, paren = 0;
+    let inSingle = false, inDouble = false;
     for (let i = 0; i < str.length; i++) {
-      let char = str[i];
-      if (char === '[') inAttr = true;
-      if (char === ']') inAttr = false;
-      if (char === '{') inContent = true;
-      if (char === '}') inContent = false;
-      
-      if (!inAttr && !inContent) {
-        if (char === '(') depth++;
-        else if (char === ')') depth--;
-        else if (depth === 0 && char === op) {
-          result.push(current);
-          current = "";
-          continue;
-        }
-      }
+      const char = str[i];
+      if (inSingle) { current += char; if (char === "'" && str[i - 1] !== "\\") inSingle = false; continue; }
+      if (inDouble) { current += char; if (char === '"' && str[i - 1] !== "\\") inDouble = false; continue; }
+      if (char === "'" && (square > 0 || brace > 0)) { inSingle = true; current += char; continue; }
+      if (char === '"' && (square > 0 || brace > 0)) { inDouble = true; current += char; continue; }
+      if (char === "[") square++;
+      else if (char === "]") square = Math.max(0, square - 1);
+      else if (char === "{") brace++;
+      else if (char === "}") brace = Math.max(0, brace - 1);
+      else if (char === "(") paren++;
+      else if (char === ")") paren = Math.max(0, paren - 1);
+      if (square === 0 && brace === 0 && paren === 0 && char === op) { result.push(current); current = ""; continue; }
       current += char;
     }
     result.push(current);
     return result;
   }
-
   function parseSingleTagNode(seg, index = 0) {
-    let tagName = "div";
-    let id = "";
-    let classes = [];
-    let attrs = [];
-    let textContent = "";
-
-    let contentMatch = seg.match(/\{([^}]*)\}/);
-    if (contentMatch) {
-      let rawText = contentMatch[1];
-      textContent = rawText.replace(/\$/g, index + 1);
-      seg = seg.replace(contentMatch[0], '');
-    }
-
-    let tagMatch = seg.match(/^([a-zA-Z0-9\-]+)/);
-    if (tagMatch && !seg.startsWith('.') && !seg.startsWith('#') && !seg.startsWith('[')) {
-      tagName = tagMatch[1];
-      seg = seg.substring(tagMatch[0].length);
-    }
-
-    let i = 0;
-    while (i < seg.length) {
-      let char = seg[i];
-      if (char === '#') {
-        i++;
-        let start = i;
-        while (i < seg.length && seg[i] !== '.' && seg[i] !== '#' && seg[i] !== '[') {
-          i++;
-        }
-        id = seg.substring(start, i);
-      } else if (char === '.') {
-        i++;
-        let start = i;
-        while (i < seg.length && seg[i] !== '.' && seg[i] !== '#' && seg[i] !== '[') {
-          i++;
-        }
-        classes.push(seg.substring(start, i));
-      } else if (char === '[') {
-        i++;
-        let start = i;
-        let bracketDepth = 1;
-        let inQuote = false;
-        let quoteChar = '';
-        while (i < seg.length && bracketDepth > 0) {
-          let c = seg[i];
-          if ((c === '"' || c === "'") && (i === 0 || seg[i - 1] !== '\\')) {
-            if (!inQuote) {
-              inQuote = true;
-              quoteChar = c;
-            } else if (quoteChar === c) {
-              inQuote = false;
-            }
-          }
-          if (!inQuote) {
-            if (c === '[') bracketDepth++;
-            if (c === ']') bracketDepth--;
-          }
-          if (bracketDepth > 0) i++;
-        }
-        attrs.push(seg.substring(start, i));
-        i++;
-      } else {
-        i++;
-      }
-    }
-
-    const selfClosing = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr'];
-    let isSelf = selfClosing.includes(tagName.toLowerCase());
-
-    return {
-      tagName,
-      id,
-      classes,
-      attrs,
-      textContent,
-      isSelfClosing: isSelf,
-      children: []
-    };
+    const ast = emmetParseElementSegment(seg);
+    if (!ast) return { tagName: "div", id: "", classes: [], attrs: [], textContent: "", isSelfClosing: false, children: [] };
+    const total = ast.multiplier > 1 ? ast.multiplier : 1;
+    const concrete = emmetMakeConcrete(ast, index, total);
+    return concrete;
   }
-
   function parseEmmet(str) {
-    str = str.trim();
+    str = String(str).trim();
     if (!str) return [];
-
-    let siblings = splitByOperator(str, '+');
-    if (siblings.length > 1) {
-      let nodes = [];
-      for (let i = 0; i < siblings.length; i++) {
-        let parsed = parseEmmet(siblings[i]);
-        nodes = nodes.concat(parsed);
-      }
-      return nodes;
-    }
-
-    let children = splitByOperator(str, '>');
-    if (children.length > 1) {
-      let parentNodes = parseEmmet(children[0]);
-      let childNodes = parseEmmet(children.slice(1).join('>'));
-      if (parentNodes.length > 0) {
-        let root = parentNodes[0];
-        let curr = root;
-        while (curr.children && curr.children.length > 0) {
-          curr = curr.children[curr.children.length - 1];
-        }
-        curr.children = childNodes;
-        return parentNodes;
-      }
-    }
-
-    let multMatch = str.match(/^(.+)\*(\d+)$/);
-    if (multMatch) {
-      let baseStr = multMatch[1];
-      let count = parseInt(multMatch[2], 10);
-      let nodes = [];
-      for (let idx = 0; idx < count; idx++) {
-        let singleNode = parseSingleTagNode(baseStr, idx);
-        nodes.push(singleNode);
-      }
-      return nodes;
-    }
-
-    return [parseSingleTagNode(str, 0)];
+    const ast = emmetParseToAST(str);
+    return emmetExpandAST(ast, 0, 1);
   }
-
   function renderNodesToHTML(nodes, baseIndent = "", indentLevel = 0) {
     let html = "";
     let indent = baseIndent + "  ".repeat(indentLevel);
-    const selfClosing = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr'];
-
     for (let node of nodes) {
+      if (node.isLorem) { html += `${indent}${node.textContent}\n`; continue; }
       let attrStr = "";
       if (node.id) attrStr += ` id="${node.id}"`;
       if (node.classes.length > 0) attrStr += ` class="${node.classes.join(' ')}"`;
-      for (let attr of node.attrs) {
-        attrStr += ` ${attr}`;
-      }
-
-      if (selfClosing.includes(node.tagName.toLowerCase())) {
+      for (let attr of node.attrs) { attrStr += ` ${attr}`; }
+      if (EMMET_SELF_CLOSING.includes(node.tagName.toLowerCase())) {
         html += `${indent}<${node.tagName}${attrStr}>\n`;
       } else if (node.children && node.children.length > 0) {
         html += `${indent}<${node.tagName}${attrStr}>\n`;
@@ -434,56 +1045,624 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     return html;
   }
-
   function expandEmmet(abbr, baseIndent = "") {
-    abbr = abbr.trim();
+    abbr = String(abbr).trim();
     if (!abbr) return "";
-    let nodes = parseEmmet(abbr);
-    return renderNodesToHTML(nodes, baseIndent, 0).trimEnd();
+    if (abbr === "!" || abbr === "html:5" || abbr === "html:5!") {
+      return `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>Document</title>\n</head>\n<body>\n  \n</body>\n</html>`;
+    }
+    try {
+      const ast = emmetParseToAST(abbr);
+      if (!ast || ast.length === 0) return "";
+      const nodes = emmetExpandAST(ast, 0, 1);
+      return renderNodesToHTML(nodes, baseIndent, 0).trimEnd();
+    } catch (e) { console.warn("Emmet expand failed:", e); return ""; }
+  }
+
+
+  const CSS_EMMET_FIXED = {
+    'df':'display: flex;', 'db':'display: block;', 'dib':'display: inline-block;', 'di':'display: inline;', 'dn':'display: none;', 'dg':'display: grid;', 'dif':'display: inline-flex;',
+    'posa':'position: absolute;', 'posr':'position: relative;', 'posf':'position: fixed;', 'poss':'position: static;', 'post':'position: sticky;',
+    'jcc':'justify-content: center;', 'jcsb':'justify-content: space-between;', 'jcsa':'justify-content: space-around;', 'jcse':'justify-content: space-evenly;', 'jcfs':'justify-content: flex-start;', 'jcfe':'justify-content: flex-end;',
+    'aic':'align-items: center;', 'aifs':'align-items: flex-start;', 'aife':'align-items: flex-end;', 'ais':'align-items: stretch;', 'aib':'align-items: baseline;',
+    'acc':'align-content: center;', 'acs':'align-content: stretch;',
+    'fdc':'flex-direction: column;', 'fdr':'flex-direction: row;', 'fdcr':'flex-direction: column-reverse;', 'fdrr':'flex-direction: row-reverse;',
+    'fww':'flex-wrap: wrap;', 'fwnw':'flex-wrap: nowrap;',
+    'tac':'text-align: center;', 'tal':'text-align: left;', 'tar':'text-align: right;', 'taj':'text-align: justify;',
+    'tdn':'text-decoration: none;', 'tdu':'text-decoration: underline;',
+    'ttu':'text-transform: uppercase;', 'ttl':'text-transform: lowercase;', 'ttc':'text-transform: capitalize;', 'ttn':'text-transform: none;',
+    'fwb':'font-weight: bold;', 'fwn':'font-weight: normal;',
+    'fsi':'font-style: italic;', 'fsn':'font-style: normal;',
+    'whsnw':'white-space: nowrap;', 'whsn':'white-space: normal;',
+    'bszbb':'box-sizing: border-box;', 'bszcb':'box-sizing: content-box;',
+    'ovh':'overflow: hidden;', 'ova':'overflow: auto;', 'ovs':'overflow: scroll;', 'ovv':'overflow: visible;',
+    'ovxh':'overflow-x: hidden;', 'ovxa':'overflow-x: auto;', 'ovyh':'overflow-y: hidden;', 'ovya':'overflow-y: auto;',
+    'curp':'cursor: pointer;', 'curd':'cursor: default;',
+    'vish':'visibility: hidden;', 'visv':'visibility: visible;',
+    'usn':'user-select: none;', 'pen':'pointer-events: none;', 'pea':'pointer-events: auto;',
+    'bshn':'box-shadow: none;', 'bgn':'background: none;', 'bdn':'border: none;',
+    'fll':'float: left;', 'flr':'float: right;', 'fln':'float: none;',
+    'clb':'clear: both;', 'cll':'clear: left;', 'clr':'clear: right;', 'cln':'clear: none;',
+    'bgsc':'background-size: cover;', 'bgsct':'background-size: contain;',
+    'bgrnr':'background-repeat: no-repeat;', 'bgrr':'background-repeat: repeat;',
+    'bgpc':'background-position: center;',
+    'w100p':'width: 100%;', 'h100p':'height: 100%;'
+  };
+  const CSS_EMMET_COLON = {
+    'd': { prop:'display', map:{ 'f':'flex','b':'block','i':'inline','ib':'inline-block','n':'none','g':'grid','if':'inline-flex','t':'table' } },
+    'pos': { prop:'position', map:{ 'a':'absolute','r':'relative','f':'fixed','s':'static','t':'sticky' } },
+    'fl': { prop:'float', map:{ 'l':'left','r':'right','n':'none' } },
+    'cl': { prop:'clear', map:{ 'b':'both','l':'left','r':'right','n':'none' } },
+    'ta': { prop:'text-align', map:{ 'c':'center','l':'left','r':'right','j':'justify' } },
+    'td': { prop:'text-decoration', map:{ 'n':'none','u':'underline' } },
+    'tt': { prop:'text-transform', map:{ 'u':'uppercase','l':'lowercase','c':'capitalize','n':'none' } },
+    'fw': { prop:'font-weight', map:{ 'b':'bold','n':'normal' } },
+    'fs': { prop:'font-style', map:{ 'i':'italic','n':'normal' } },
+    'ov': { prop:'overflow', map:{ 'h':'hidden','a':'auto','s':'scroll','v':'visible' } },
+    'cur': { prop:'cursor', map:{ 'p':'pointer','d':'default','a':'auto' } },
+    'vis': { prop:'visibility', map:{ 'h':'hidden','v':'visible' } },
+    'bgs': { prop:'background-size', map:{ 'c':'cover','ct':'contain' } },
+    'bgr': { prop:'background-repeat', map:{ 'nr':'no-repeat','r':'repeat','rx':'repeat-x','ry':'repeat-y' } },
+    'whs': { prop:'white-space', map:{ 'nw':'nowrap','n':'normal','p':'pre' } },
+    'jc': { prop:'justify-content', map:{ 'c':'center','sb':'space-between','sa':'space-around','se':'space-evenly','fs':'flex-start','fe':'flex-end' } },
+    'ai': { prop:'align-items', map:{ 'c':'center','fs':'flex-start','fe':'flex-end','s':'stretch','b':'baseline' } },
+    'fd': { prop:'flex-direction', map:{ 'c':'column','r':'row','cr':'column-reverse','rr':'row-reverse' } },
+    'c': { prop:'color', map:{ 'r':'red' } },
+    'bgc': { prop:'background-color', map:{} },
+    'fz': { prop:'font-size', map:{} },
+    'm': { prop:'margin', map:{} },
+    'p': { prop:'padding', map:{} }
+  };
+  const CSS_EMMET_PREFIX = [
+    { pre:'maw', prop:'max-width', unit:'px', kind:'num' },
+    { pre:'mah', prop:'max-height', unit:'px', kind:'num' },
+    { pre:'miw', prop:'min-width', unit:'px', kind:'num' },
+    { pre:'mih', prop:'min-height', unit:'px', kind:'num' },
+    { pre:'bgc', prop:'background-color', unit:'', kind:'color' },
+    { pre:'bgi', prop:'background-image', unit:'', kind:'raw' },
+    { pre:'bgs', prop:'background-size', unit:'', kind:'keyword', allowed:['cover','contain','auto','c','ct'] },
+    { pre:'bgp', prop:'background-position', unit:'', kind:'keyword', allowed:['center','left','right','top','bottom','c'] },
+    { pre:'bgr', prop:'background-repeat', unit:'', kind:'keyword', allowed:['no-repeat','repeat','repeat-x','repeat-y','nr','r','rx','ry'] },
+    { pre:'bdt', prop:'border-top', unit:'px', kind:'border' },
+    { pre:'bdb', prop:'border-bottom', unit:'px', kind:'border' },
+    { pre:'bdl', prop:'border-left', unit:'px', kind:'border' },
+    { pre:'bdr', prop:'border-right', unit:'px', kind:'border' },
+    { pre:'mx', prop:'__mx', unit:'px', kind:'num', dual:true },
+    { pre:'my', prop:'__my', unit:'px', kind:'num', dual:true },
+    { pre:'px', prop:'__px', unit:'px', kind:'num', dual:true },
+    { pre:'py', prop:'__py', unit:'px', kind:'num', dual:true },
+    { pre:'mt', prop:'margin-top', unit:'px', kind:'num' },
+    { pre:'mr', prop:'margin-right', unit:'px', kind:'num' },
+    { pre:'mb', prop:'margin-bottom', unit:'px', kind:'num' },
+    { pre:'ml', prop:'margin-left', unit:'px', kind:'num' },
+    { pre:'pt', prop:'padding-top', unit:'px', kind:'num' },
+    { pre:'pr', prop:'padding-right', unit:'px', kind:'num' },
+    { pre:'pb', prop:'padding-bottom', unit:'px', kind:'num' },
+    { pre:'pl', prop:'padding-left', unit:'px', kind:'num' },
+    { pre:'fz', prop:'font-size', unit:'px', kind:'num' },
+    { pre:'fw', prop:'font-weight', unit:'', kind:'fw' },
+    { pre:'ff', prop:'font-family', unit:'', kind:'raw' },
+    { pre:'lh', prop:'line-height', unit:'', kind:'lh' },
+    { pre:'ls', prop:'letter-spacing', unit:'px', kind:'num' },
+    { pre:'gap', prop:'gap', unit:'px', kind:'num' },
+    { pre:'rg', prop:'row-gap', unit:'px', kind:'num' },
+    { pre:'cg', prop:'column-gap', unit:'px', kind:'num' },
+    { pre:'ord', prop:'order', unit:'', kind:'num' },
+    { pre:'fx', prop:'flex', unit:'', kind:'num' },
+    { pre:'fg', prop:'flex-grow', unit:'', kind:'num' },
+    { pre:'fs', prop:'font-style', unit:'', kind:'keyword', allowed:['italic','normal','i','n'] },
+    { pre:'trs', prop:'transition', unit:'', kind:'raw' },
+    { pre:'trf', prop:'transform', unit:'', kind:'raw' },
+    { pre:'anim', prop:'animation', unit:'', kind:'raw' },
+    { pre:'cur', prop:'cursor', unit:'', kind:'keyword', allowed:['pointer','default','auto','p','d','a'] },
+    { pre:'bs', prop:'box-shadow', unit:'', kind:'raw' },
+    { pre:'br', prop:'border-radius', unit:'px', kind:'num' },
+    { pre:'bd', prop:'border', unit:'px', kind:'border' },
+    { pre:'bg', prop:'background', unit:'', kind:'raw' },
+    { pre:'m', prop:'margin', unit:'px', kind:'num', multi:true },
+    { pre:'p', prop:'padding', unit:'px', kind:'num', multi:true },
+    { pre:'w', prop:'width', unit:'px', kind:'num' },
+    { pre:'h', prop:'height', unit:'px', kind:'num' },
+    { pre:'t', prop:'top', unit:'px', kind:'num' },
+    { pre:'r', prop:'right', unit:'px', kind:'num' },
+    { pre:'b', prop:'bottom', unit:'px', kind:'num' },
+    { pre:'l', prop:'left', unit:'px', kind:'num' },
+    { pre:'z', prop:'z-index', unit:'', kind:'num' },
+    { pre:'op', prop:'opacity', unit:'', kind:'num' },
+    { pre:'c', prop:'color', unit:'', kind:'color' }
+  ];
+  function cssEmmetNumericToken(tok, unit) {
+    if (!tok) return null;
+    if (tok === 'a' || tok === 'auto') return 'auto';
+    if (tok === 'n' || tok === 'none') return 'none';
+    if (tok === '0') return '0';
+    if (/^-?\d*\.?\d+$/.test(tok)) {
+      if (tok === '0') return '0';
+      if (!unit) return tok;
+      return tok + unit;
+    }
+    const m = tok.match(/^(-?\d*\.?\d+)(p|e|r|vh|vw|v|%|px|em|rem|deg|s|ms|x)$/);
+    if (m) {
+      const num = m[1], suf = m[2];
+      if (suf === 'p') return num + '%';
+      if (suf === 'e') return num + 'em';
+      if (suf === 'r') return num + 'rem';
+      if (suf === 'x') return num + 'ex';
+      if (suf === 'v') return num + 'vw';
+      return num + suf;
+    }
+    return null;
+  }
+  function cssEmmetParseValues(valuePart, unit, kind) {
+    if (!valuePart) return null;
+    if (valuePart[0] === '#') {
+      if (!/^#[0-9a-fA-F]{3,8}$/.test(valuePart)) return null;
+      return [valuePart];
+    }
+    if (valuePart.startsWith('-')) {
+      const rest = valuePart.slice(1);
+      if (!rest) return null;
+      const parts = rest.split('-').filter(Boolean);
+      if (parts.length === 0) return null;
+      const first = cssEmmetNumericToken('-' + parts[0], unit);
+      if (!first) return null;
+      const out = [first];
+      for (let i=1;i<parts.length;i++){ const v = cssEmmetNumericToken(parts[i], unit); if (!v) return null; out.push(v); }
+      return out;
+    }
+    const parts = valuePart.split('-').filter(s=>s!=='');
+    if (parts.length===0) return null;
+    const out = [];
+    for (const p of parts){ const v = cssEmmetNumericToken(p, unit); if (!v) return null; out.push(v); }
+    return out;
+  }
+  function expandCssEmmet(rawAbbr) {
+    let abbr = String(rawAbbr||'').trim();
+    if (!abbr) return '';
+    let important = false;
+    if (abbr.endsWith('!')) { important = true; abbr = abbr.slice(0,-1); if (!abbr) return ''; }
+    const imp = important ? ' !important' : '';
+    if (CSS_EMMET_FIXED[abbr]) {
+      const base = CSS_EMMET_FIXED[abbr];
+      if (important) return base.replace(/;$/, '') + imp + ';';
+      return base;
+    }
+    if (abbr.includes(':')) {
+      const idx = abbr.indexOf(':');
+      const pre = abbr.slice(0, idx);
+      const val = abbr.slice(idx+1);
+      if (!val) return '';
+      if (CSS_EMMET_COLON[pre]) {
+        const entry = CSS_EMMET_COLON[pre];
+        if (entry.map && entry.map[val]) return entry.prop + ': ' + entry.map[val] + imp + ';';
+        if (pre === 'c' || pre === 'bgc') {
+          if (val[0] === '#') { if (!/^#[0-9a-fA-F]{3,8}$/.test(val)) return ''; return entry.prop + ': ' + val + imp + ';'; }
+          if (/^[a-z]+$/.test(val)) return entry.prop + ': ' + val + imp + ';';
+          return '';
+        }
+        if (pre === 'fz' || pre === 'm' || pre === 'p') {
+          const v = cssEmmetNumericToken(val, 'px');
+          if (!v) return '';
+          return entry.prop + ': ' + v + imp + ';';
+        }
+        if (val) return entry.prop + ': ' + val + imp + ';';
+      }
+      return '';
+    }
+    for (const entry of CSS_EMMET_PREFIX) {
+      if (abbr === entry.pre) {
+        if (entry.pre === 'bd') return 'border: 1px solid #000' + imp + ';';
+        if (entry.pre === 'm' || entry.pre === 'p') return entry.prop + ': 0' + imp + ';';
+        // Bare 'bg' without value is invalid.
+        return '';
+      }
+      if (abbr.startsWith(entry.pre)) {
+        // Do not let 'bg' match bgc/bgi/bgs/bgp, or bgrn becomes 'background: rn;'. Do not guard 'bgr' - 'bgred' also starts with it.
+        if (entry.pre === 'bg' && /^(bgc|bgi|bgs|bgp)/.test(abbr)) continue;
+        const valuePart = abbr.slice(entry.pre.length);
+        if (!valuePart) continue;
+        if (!/^[0-9\-#a-zA-Z\.]/.test(valuePart)) continue;
+        if (entry.dual) {
+          const vals = cssEmmetParseValues(valuePart, entry.unit, entry.kind);
+          if (!vals) continue;
+          const v = vals.join(' ');
+          if (entry.pre === 'mx') return 'margin-left: ' + v + imp + ';\nmargin-right: ' + v + imp + ';';
+          if (entry.pre === 'my') return 'margin-top: ' + v + imp + ';\nmargin-bottom: ' + v + imp + ';';
+          if (entry.pre === 'px') return 'padding-left: ' + v + imp + ';\npadding-right: ' + v + imp + ';';
+          if (entry.pre === 'py') return 'padding-top: ' + v + imp + ';\npadding-bottom: ' + v + imp + ';';
+        }
+        if (entry.kind === 'border') {
+          if (valuePart === '0') return entry.prop + ': 0' + imp + ';';
+          const bm = valuePart.match(/^(\d+)(s|d|dot|db)?(#(?:[0-9a-fA-F]{3,8}))?$/);
+          if (bm) {
+            const num = bm[1];
+            const style = bm[2] === 's' ? ' solid' : bm[2] === 'd' ? ' dashed' : bm[2] === 'dot' ? ' dotted' : bm[2] === 'db' ? ' double' : ' solid';
+            const col = bm[3] ? ' ' + bm[3] : '';
+            return entry.prop + ': ' + num + 'px' + style + col + imp + ';';
+          }
+          const vals = cssEmmetParseValues(valuePart, entry.unit, entry.kind);
+          if (vals) return entry.prop + ': ' + vals.join(' ') + imp + ';';
+          continue;
+        }
+        if (entry.kind === 'raw') {
+          return entry.prop + ': ' + valuePart + imp + ';';
+        }
+        if (entry.kind === 'color') {
+          if (valuePart[0] === '#') {
+            if (!/^#[0-9a-fA-F]{3,8}$/.test(valuePart)) continue;
+            return entry.prop + ': ' + valuePart + imp + ';';
+          }
+          const named = ['red','blue','green','black','white','transparent','yellow','orange','pink','purple','gray','grey','brown','cyan','magenta','lime','navy','teal','maroon','olive','aqua','silver'];
+          if (named.includes(valuePart.toLowerCase())) return entry.prop + ': ' + valuePart.toLowerCase() + imp + ';';
+          continue;
+        }
+        if (entry.kind === 'keyword') {
+          const mapShort = { 'c':'center','ct':'contain','nr':'no-repeat','r':'repeat','rx':'repeat-x','ry':'repeat-y','i':'italic','n':'normal','p':'pointer','d':'default','a':'auto' };
+          if (entry.allowed && entry.allowed.includes(valuePart)) {
+            const v = mapShort[valuePart] || valuePart;
+            return entry.prop + ': ' + v + imp + ';';
+          }
+          continue;
+        }
+        if (entry.kind === 'fw') {
+          if (valuePart === 'b' || valuePart === 'bold') return entry.prop + ': bold' + imp + ';';
+          if (valuePart === 'n' || valuePart === 'normal') return entry.prop + ': normal' + imp + ';';
+          if (/^\d+$/.test(valuePart)) return entry.prop + ': ' + valuePart + imp + ';';
+          continue;
+        }
+        if (entry.kind === 'lh') {
+          if (valuePart === 'n' || valuePart === 'normal') return entry.prop + ': normal' + imp + ';';
+          if (/^-?\d*\.?\d+$/.test(valuePart)) return entry.prop + ': ' + valuePart + imp + ';';
+          const v = cssEmmetNumericToken(valuePart, 'px');
+          if (v) return entry.prop + ': ' + v + imp + ';';
+          continue;
+        }
+        const vals = cssEmmetParseValues(valuePart, entry.unit, entry.kind);
+        if (!vals) continue;
+        return entry.prop + ': ' + vals.join(' ') + imp + ';';
+      }
+    }
+    return '';
+  }
+  function extractCssEmmetAbbr(lineBefore) {
+    if (!lineBefore) return '';
+    const m = lineBefore.match(/([A-Za-z][A-Za-z0-9\-:#.!]*)$/);
+    if (!m) return '';
+    let tok = m[1];
+    tok = tok.replace(/\.+$/, '');
+    return tok;
+  }
+  function isValidCssEmmetAbbr(abbr) {
+    if (!abbr) return false;
+    if (abbr === '!') return false;
+    return expandCssEmmet(abbr) !== '';
+  }
+  function triggerCssEmmetExpansion(cm) {
+    const cursor = cm.getCursor();
+    const line = cm.getLine(cursor.line);
+    const lineBefore = line.substring(0, cursor.ch);
+    const abbr = extractCssEmmetAbbr(lineBefore);
+    if (!abbr) return false;
+    if (!isValidCssEmmetAbbr(abbr)) return false;
+    const beforeAbbr = line.substring(0, cursor.ch - abbr.length);
+    let startCh, baseIndent;
+    if (beforeAbbr.trim() === '') { startCh = 0; baseIndent = beforeAbbr; } else { startCh = cursor.ch - abbr.length; baseIndent = ''; }
+    let expanded = expandCssEmmet(abbr);
+    if (!expanded || expanded === abbr) return false;
+    if (baseIndent && expanded.includes('\\n')) {
+      expanded = expanded.split('\\n').map((l,idx)=> idx===0? l : baseIndent + l).join('\\n');
+      expanded = baseIndent + expanded;
+    } else if (baseIndent) {
+      expanded = baseIndent + expanded;
+    }
+    cm.replaceRange(expanded, {line: cursor.line, ch: startCh}, cursor);
+    hideEmmetPreview();
+    return true;
+  }
+
+  function expandAllCssEmmet(cm) {
+    if (!cm || !cm.getValue) return 0;
+    const totalLines = cm.lineCount();
+    let expandedCount = 0;
+    // Go bottom-up so line numbers stay valid while replacing.
+    for (let ln = totalLines - 1; ln >= 0; ln--) {
+      const line = cm.getLine(ln) || "";
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      if (trimmed.includes("{") || trimmed.includes("}") || trimmed.endsWith(";")) continue;
+      if (trimmed.startsWith("/*") || trimmed.startsWith("//")) continue;
+      const indentMatch = line.match(/^([ \t]*)/);
+      const indent = indentMatch ? indentMatch[1] : "";
+      const parts = trimmed.split(/[;\s]+/).filter(Boolean);
+      if (parts.length === 0) continue;
+      let outLines = [];
+      let ok = true;
+      for (const part of parts) {
+        if (!isValidCssEmmetAbbr(part)) { ok = false; break; }
+        const exp = expandCssEmmet(part);
+        if (!exp) { ok = false; break; }
+        const sub = exp.split("\n");
+        for (const s of sub) outLines.push(indent + s);
+      }
+      if (!ok || outLines.length === 0) continue;
+      const from = { line: ln, ch: 0 };
+      const to = { line: ln, ch: line.length };
+      cm.replaceRange(outLines.join("\n"), from, to);
+      expandedCount += outLines.length;
+    }
+    hideEmmetPreview();
+    return expandedCount;
+  }
+
+
+
+  let emmetPreviewEl = null;
+  let emmetPreviewInner = null;
+  let emmetPreviewAbbrEl = null;
+  let emmetPreviewArrowEl = null;
+  let emmetPreviewTimer = null;
+  function emmetEscapeHtml(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  function emmetHighlightPreview(text, mode) {
+    const esc = emmetEscapeHtml(text);
+    if (mode === "css") {
+      // Single-pass replace: never re-scan inserted <span> tags.
+      return esc.replace(/([a-zA-Z-]+)(\s*:)|(#[0-9a-fA-F]{3,8})|(\b\d*\.?\d+(?:px|%|em|rem|vh|vw|deg|s|ms)?\b)|(!important)/g, function(m, prop, colon, hex, num, imp) {
+        if (prop) return '<span class="tok-prop">' + prop + '</span>' + colon;
+        if (hex) return '<span class="tok-str">' + hex + '</span>';
+        if (num) return '<span class="tok-num">' + num + '</span>';
+        if (imp) return '<span class="tok-imp">' + imp + '</span>';
+        return m;
+      });
+    }
+    return esc.replace(/(&lt;!DOCTYPE[^&]*?&gt;)|(&lt;!--.*?--&gt;)|(&lt;\/?)([a-zA-Z][a-zA-Z0-9-]*)|([a-zA-Z-]+)(=)|("[^"]*")|(&gt;)|(&lt;)/g, function(m, doctype, comment, lt, tag, attr, eq, str, gt, lt2) {
+      if (doctype) return '<span class="tok-gray">' + doctype + '</span>';
+      if (comment) return '<span class="tok-gray">' + comment + '</span>';
+      if (lt) return '<span class="tok-gray">' + lt + '</span><span class="tok-tag">' + tag + '</span>';
+      if (attr) return '<span class="tok-attr">' + attr + '</span>' + eq;
+      if (str) return '<span class="tok-str">' + str + '</span>';
+      if (gt) return '<span class="tok-gray">' + gt + '</span>';
+      if (lt2) return '<span class="tok-gray">' + lt2 + '</span>';
+      return m;
+    });
+  }
+  function ensureEmmetPreviewEl() {
+    if (emmetPreviewEl) return emmetPreviewEl;
+    if (!document.getElementById("emmet-preview-style")) {
+      const st = document.createElement("style");
+      st.id = "emmet-preview-style";
+      st.textContent = ".emmet-live-preview{position:fixed;z-index:9999;background:rgba(42,42,58,0.98);color:#e8e8e8;border:1px solid #4a4a63;border-radius:6px;box-shadow:0 12px 28px rgba(0,0,0,.5);overflow:visible;font-family:ui-monospace,Menlo,Consolas,monospace;display:none;backdrop-filter:blur(2px)}.emmet-live-preview-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;background:#34344a;border-bottom:1px solid #4a4a63;border-radius:6px 6px 0 0}.emmet-live-preview-title{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#9ad1ff;font-weight:700;white-space:nowrap}.emmet-live-preview-abbr{font-size:12px;color:#ffd479;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}.emmet-live-preview-close{background:transparent;border:0;color:#aaa;font-size:18px;line-height:1;cursor:pointer;padding:0 2px}.emmet-live-preview-close:hover{color:#fff}.emmet-live-preview-body{padding:8px 10px;max-height:200px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;touch-action:pan-y;overscroll-behavior:contain;pointer-events:auto;scrollbar-width:thin;scrollbar-color:#5a5a75 transparent}.emmet-live-preview-body::-webkit-scrollbar{width:6px}.emmet-live-preview-body::-webkit-scrollbar-thumb{background:#5a5a75;border-radius:3px}.emmet-live-preview-body::-webkit-scrollbar-track{background:transparent}.emmet-live-preview-body pre{margin:0;white-space:pre-wrap;word-break:break-word;font-size:12.5px;line-height:1.55;color:#e8e8e8}.emmet-live-preview-body pre .tok-tag{color:#6fca8a}.emmet-live-preview-body pre .tok-attr{color:#ffffff}.emmet-live-preview-body pre .tok-str{color:#e06c75}.emmet-live-preview-body pre .tok-gray{color:#8a8a9a}.emmet-live-preview-body pre .tok-prop{color:#9ad1ff}.emmet-live-preview-body pre .tok-num{color:#e5a55a}.emmet-live-preview-body pre .tok-imp{color:#ff7edb}.emmet-live-preview-arrow{position:absolute;width:10px;height:10px;background:#34344a;border-left:1px solid #4a4a63;border-top:1px solid #4a4a63;transform:rotate(45deg);top:-6px;left:18px;z-index:1}.emmet-live-preview.arrow-below .emmet-live-preview-arrow{top:auto;bottom:-6px;transform:rotate(225deg);background:#2a2a3a;border-left:1px solid #4a4a63;border-top:1px solid #4a4a63}";
+      document.head.appendChild(st);
+    }
+    const wrap = document.createElement("div");
+    wrap.className = "emmet-live-preview";
+    wrap.innerHTML = '<div class="emmet-live-preview-arrow"></div><div class="emmet-live-preview-head"><span class="emmet-live-preview-title">Emmet Preview</span><span class="emmet-live-preview-abbr"></span><button class="emmet-live-preview-close" type="button" title="Close (Esc)">×</button></div><div class="emmet-live-preview-body"><pre></pre></div>';
+    document.body.appendChild(wrap);
+    emmetPreviewEl = wrap;
+    emmetPreviewAbbrEl = wrap.querySelector(".emmet-live-preview-abbr");
+    emmetPreviewInner = wrap.querySelector(".emmet-live-preview-body pre");
+    emmetPreviewArrowEl = wrap.querySelector(".emmet-live-preview-arrow");
+    const closeBtn = wrap.querySelector(".emmet-live-preview-close");
+    if (closeBtn) closeBtn.addEventListener("click", (e) => { e.stopPropagation(); hideEmmetPreview(); });
+    wrap.style.pointerEvents = "none";
+    if (closeBtn) closeBtn.style.pointerEvents = "auto";
+    const bodyEl = wrap.querySelector(".emmet-live-preview-body");
+    if (bodyEl) {
+      bodyEl.style.pointerEvents = "auto";
+      // Block mousedown to keep editor focus, but allow touch scroll.
+      bodyEl.addEventListener("mousedown", (e) => { e.preventDefault(); }, true);
+      bodyEl.addEventListener("touchstart", (e) => { e.stopPropagation(); }, true);
+    }
+    return wrap;
+  }
+  function hideEmmetPreview() {
+    if (emmetPreviewEl) emmetPreviewEl.style.display = "none";
+    if (emmetPreviewTimer) { clearTimeout(emmetPreviewTimer); emmetPreviewTimer = null; }
+  }
+  function showEmmetPreview(cm, mode) {
+    try {
+      if (!cm || !cm.getCursor) return;
+      if (mode !== "htmlmixed" && mode !== "html" && mode !== "css") { hideEmmetPreview(); return; }
+      const cursor = cm.getCursor();
+      const line = cm.getLine(cursor.line) || "";
+      const lineBefore = line.substring(0, cursor.ch);
+      let abbr = "";
+      let expanded = "";
+      if (mode === "css") {
+        abbr = extractCssEmmetAbbr(lineBefore);
+        if (!abbr || !isValidCssEmmetAbbr(abbr)) { hideEmmetPreview(); return; }
+        expanded = expandCssEmmet(abbr);
+      } else {
+        abbr = extractEmmetAbbr(lineBefore);
+        if (!abbr || !isValidEmmetAbbr(abbr)) { hideEmmetPreview(); return; }
+        expanded = expandEmmet(abbr, "");
+      }
+      if (!expanded || expanded === abbr) { hideEmmetPreview(); return; }
+      const el = ensureEmmetPreviewEl();
+      if (emmetPreviewAbbrEl) emmetPreviewAbbrEl.textContent = abbr;
+      if (emmetPreviewInner) {
+        let previewText = expanded;
+        if (abbr === "!" || abbr === "html:5" || abbr === "html:5!") {
+          const lines = expanded.split("\n");
+          previewText = lines.slice(0, 10).join("\n") + "\n  ...\n</html>";
+        }
+        if (previewText.length > 1200) previewText = previewText.slice(0, 1200) + "\n...";
+        emmetPreviewInner.innerHTML = emmetHighlightPreview(previewText, mode);
+      }
+      el.style.display = "block";
+      let wrapperRect = null;
+      try {
+        const w = cm.getWrapperElement && cm.getWrapperElement();
+        if (w) wrapperRect = w.getBoundingClientRect();
+      } catch (e) {}
+      let cursorPage = null;
+      try { cursorPage = cm.cursorCoords(null, "page"); } catch (e) {}
+      if (!cursorPage) { hideEmmetPreview(); return; }
+      const gap = 4;
+      let popupW = 380;
+      let popupLeft = 20;
+      if (wrapperRect) {
+        popupW = Math.max(240, wrapperRect.width - 16);
+        popupLeft = wrapperRect.left + 8;
+        if (popupLeft + popupW > window.innerWidth - 8) {
+          popupW = window.innerWidth - 16;
+          popupLeft = 8;
+        }
+      } else {
+        popupLeft = Math.max(8, cursorPage.left);
+        if (popupLeft + popupW > window.innerWidth - 8) popupW = window.innerWidth - 16;
+      }
+      el.style.left = popupLeft + "px";
+      el.style.width = popupW + "px";
+      const popupH = el.offsetHeight || 220;
+      let topBelow = cursorPage.bottom + gap;
+      let topAbove = cursorPage.top - popupH - gap;
+      let showBelow = true;
+      // If no space below, show above without covering the active line.
+      if (topBelow + popupH > window.innerHeight - 8) {
+        if (topAbove >= 8) showBelow = false;
+        else {
+          el.style.maxHeight = "180px";
+        }
+      }
+      let top = showBelow ? topBelow : topAbove;
+      if (top < 8) top = 8;
+      el.style.top = top + "px";
+      if (showBelow) el.classList.remove("arrow-below");
+      else el.classList.add("arrow-below");
+      if (emmetPreviewArrowEl) {
+        let arrowLeft = cursorPage.left - popupLeft - 5;
+        if (arrowLeft < 14) arrowLeft = 14;
+        if (arrowLeft > popupW - 18) arrowLeft = popupW - 18;
+        emmetPreviewArrowEl.style.left = arrowLeft + "px";
+      }
+    } catch (e) {}
+  }
+  function scheduleEmmetPreview(cm, mode) {
+    if (emmetPreviewTimer) clearTimeout(emmetPreviewTimer);
+    emmetPreviewTimer = setTimeout(() => showEmmetPreview(cm, mode), 140);
+  }
+  function setupEmmetLivePreview(cm, mode) {
+    if (!cm || !cm.on) return;
+    // Show preview on typing only, not on tap. On tap/arrow move, hide it.
+    let _lastEmmetChange = 0;
+    cm.on("change", () => { _lastEmmetChange = Date.now(); scheduleEmmetPreview(cm, mode); });
+    cm.on("cursorActivity", () => {
+      // If typing just happened, the change timer will show the preview.
+      if (Date.now() - _lastEmmetChange > 300) hideEmmetPreview();
+    });
+    cm.on("blur", () => hideEmmetPreview());
+    try {
+      const wrapper = cm.getWrapperElement && cm.getWrapperElement();
+      if (wrapper) {
+        wrapper.addEventListener("keydown", (e) => { if (e.key === "Escape" || e.key === "Tab") hideEmmetPreview(); }, true);
+      }
+    } catch (e) {}
+  }
+
+
+  function triggerSnippetExpansion(cm, mode) {
+    const cursor = cm.getCursor();
+    const line = cm.getLine(cursor.line);
+    const lineBefore = line.substring(0, cursor.ch);
+    const words = lineBefore.trim().split(/\s+/);
+    const lastWord = words[words.length - 1] || "";
+
+    let langKey = "html";
+    if (mode === "javascript") langKey = "js";
+    else if (mode === "css") langKey = "css";
+
+    if (customSnippets[langKey] && customSnippets[langKey][lastWord]) {
+      let snippetTpl = customSnippets[langKey][lastWord];
+      const indentMatch = line.match(/^([ \t]*)/);
+      let baseIndent = indentMatch ? indentMatch[1] : '';
+      
+      let formattedSnippet = snippetTpl.split('\n').map((l, idx) => idx === 0 ? l : baseIndent + l).join('\n');
+      let startCh = cursor.ch - lastWord.length;
+
+      cm.replaceRange(formattedSnippet, {line: cursor.line, ch: startCh}, cursor);
+      return true;
+    }
+    return false;
+  }
+
+  function extractEmmetAbbr(lineBefore) {
+    if (!lineBefore) return "";
+    let i = lineBefore.length - 1;
+    let square = 0, brace = 0, paren = 0;
+    let inSingle = false, inDouble = false;
+    while (i >= 0) {
+      const ch = lineBefore[i];
+      const prev = i > 0 ? lineBefore[i - 1] : "";
+      if (inSingle) { if (ch === "'" && prev !== "\\") inSingle = false; i--; continue; }
+      if (inDouble) { if (ch === '"' && prev !== "\\") inDouble = false; i--; continue; }
+      if (ch === "'") {
+        if (square > 0 || brace > 0 || paren > 0) { inSingle = true; i--; continue; }
+        break;
+      }
+      if (ch === '"') {
+        if (square > 0 || brace > 0 || paren > 0) { inDouble = true; i--; continue; }
+        break;
+      }
+      if (ch === "]") { square++; i--; continue; }
+      if (ch === "[") { if (square > 0) square--; i--; continue; }
+      if (ch === "}") { brace++; i--; continue; }
+      if (ch === "{") { if (brace > 0) brace--; i--; continue; }
+      if (ch === ")") { paren++; i--; continue; }
+      if (ch === "(") { if (paren > 0) paren--; i--; continue; }
+      if (square > 0 || brace > 0 || paren > 0) { i--; continue; }
+      if (/[A-Za-z0-9\-_.\#\>\+\^\*\:\$\@\!]/.test(ch)) { i--; continue; }
+      break;
+    }
+    return lineBefore.slice(i + 1);
+  }
+  function isValidEmmetAbbr(abbr) {
+    if (!abbr) return false;
+    if (abbr === "!" || abbr === "html:5" || abbr === "html:5!") return true;
+    if (!/[A-Za-z.!#(\[]/.test(abbr)) return false;
+    if (/[>\+\^\*\.\#\[\{\(\)!]/.test(abbr)) return true;
+    const low = abbr.toLowerCase();
+    if (EMMET_KNOWN_TAGS.has(low)) return true;
+    if (/^lorem\d*$/.test(low)) return true;
+    if (/^[a-z][a-z0-9]*-[a-z0-9\-]+$/.test(low)) return true;
+    return false;
+  }
+  function triggerEmmetExpansion(cm, mode) {
+    if (mode === "css") return triggerCssEmmetExpansion(cm);
+    if (mode !== "htmlmixed" && mode !== "html") return false;
+    const cursor = cm.getCursor();
+    const line = cm.getLine(cursor.line);
+    const lineBefore = line.substring(0, cursor.ch);
+    const abbr = extractEmmetAbbr(lineBefore);
+    if (!abbr) return false;
+    if (!isValidEmmetAbbr(abbr)) return false;
+    const beforeAbbr = line.substring(0, cursor.ch - abbr.length);
+    let startCh, baseIndent;
+    if (beforeAbbr.trim() === "") { startCh = 0; baseIndent = beforeAbbr; }
+    else { startCh = cursor.ch - abbr.length; baseIndent = ""; }
+    let expanded;
+    if (abbr === "!" || abbr === "html:5" || abbr === "html:5!") expanded = expandEmmet(abbr, "");
+    else expanded = expandEmmet(abbr, baseIndent);
+    if (!expanded || expanded === abbr) return false;
+    cm.replaceRange(expanded, {line: cursor.line, ch: startCh}, cursor);
+    hideEmmetPreview();
+    return true;
   }
 
   function setupSmartEditorFeatures(cm, mode) {
+    setupEmmetLivePreview(cm, mode);
     const extraKeys = cm.getOption("extraKeys") || {};
     extraKeys["Ctrl-/"] = function(cm) { toggleCustomComment(); };
     extraKeys["Cmd-/"] = function(cm) { toggleCustomComment(); };
+
+    // Alt+S = snippets, Tab = Emmet/indent. Keeps the two from conflicting.
+    extraKeys["Alt-S"] = function(cm) { triggerSnippetExpansion(cm, mode); };
+    extraKeys["Alt-s"] = function(cm) { triggerSnippetExpansion(cm, mode); };
     
     extraKeys["Tab"] = function(cm) {
-      const cursor = cm.getCursor();
-      const line = cm.getLine(cursor.line);
-      const lineBefore = line.substring(0, cursor.ch);
-      const words = lineBefore.trim().split(/\s+/);
-      const lastWord = words[words.length - 1] || "";
-
-      let langKey = "html";
-      if (mode === "javascript") langKey = "js";
-      else if (mode === "css") langKey = "css";
-
-      if (customSnippets[langKey] && customSnippets[langKey][lastWord]) {
-        let snippetTpl = customSnippets[langKey][lastWord];
-        const indentMatch = line.match(/^([ \t]*)/);
-        let baseIndent = indentMatch ? indentMatch[1] : '';
-        
-        let formattedSnippet = snippetTpl.split('\n').map((l, idx) => idx === 0 ? l : baseIndent + l).join('\n');
-        let startCh = cursor.ch - lastWord.length;
-
-        cm.replaceRange(formattedSnippet, {line: cursor.line, ch: startCh}, cursor);
+      if (triggerEmmetExpansion(cm, mode)) {
         return;
-      }
-
-      if (mode === "htmlmixed" || mode === "html") {
-        const match = lineBefore.match(/([a-zA-Z0-9\-\.\#\[\]\=\"\:\;\*\+\(\)\>\{\},\s\$]+)+$/);
-        if (match) {
-          let abbr = match[0].trim();
-          let startCh = cursor.ch - abbr.length;
-          const indentMatch = line.match(/^([ \t]*)/);
-          let baseIndent = indentMatch ? indentMatch[1] : '';
-
-          let expanded = expandEmmet(abbr, baseIndent);
-          if (expanded) {
-            cm.replaceRange(expanded, {line: cursor.line, ch: startCh}, cursor);
-            return;
-          }
-        }
       }
 
       if (cm.somethingSelected()) {
@@ -500,7 +1679,6 @@ document.addEventListener("DOMContentLoaded", () => {
   setupSmartEditorFeatures(window.cssEditor, "css");
   setupSmartEditorFeatures(window.jsEditor, "javascript");
 
-  // --- CUSTOM SNIPPETS DIRECT JS EDITOR INTEGRATION ---
   const editSnippetsBtn = document.getElementById("menu-snippets-edit-btn");
   const saveSnippetsBtn = document.getElementById("menu-snippets-save-btn");
 
@@ -508,19 +1686,25 @@ document.addEventListener("DOMContentLoaded", () => {
     editSnippetsBtn.addEventListener("click", () => {
       let currentJsonStr = JSON.stringify(customSnippets, null, 2);
       
-      const jsTabBtn = document.getElementById("js-tab");
-      if (jsTabBtn) {
-        const bsTab = new bootstrap.Tab(jsTabBtn);
-        bsTab.show();
-      }
+      showEditorTab("js-tab", "js-pane");
 
       if (window.jsEditor) {
+        // Backup JS before replacing it with snippets JSON. setValue triggers preview save, so without this the JS is lost. Skip backup if snippets JSON is already open.
+        try {
+          const _curJs = window.jsEditor.getValue();
+          let _isSnippetsJson = false;
+          try { const _p = JSON.parse(_curJs.trim()); if (_p && typeof _p === 'object' && ('js' in _p || 'html' in _p || 'css' in _p)) _isSnippetsJson = true; } catch (e) {}
+          if (!_isSnippetsJson) {
+            window._snippetsJsBackup = _curJs;
+            try { localStorage.setItem("sandbox_js_backup_before_snippets", _curJs); } catch (e) {}
+          }
+        } catch (e) {}
         window.jsEditor.setValue(currentJsonStr);
         window.jsEditor.setOption("mode", "javascript");
         window.jsEditor.refresh();
       }
 
-      alert("📝 Custom snippets JSON loaded into JavaScript Editor! Edit your snippets there and click 'Save Snippets'.");
+      alert("Snippets JSON loaded.\nSave to bring your JS back.");
     });
   }
 
@@ -533,9 +1717,18 @@ document.addEventListener("DOMContentLoaded", () => {
         let parsed = JSON.parse(editorContent);
         customSnippets = parsed;
         localStorage.setItem("sandbox_custom_snippets", JSON.stringify(parsed, null, 2));
-        alert("✅ Custom snippets saved successfully from JS Editor!");
+        // Restore backed-up JS, otherwise the editor keeps showing snippets JSON.
+        const _backup = window._snippetsJsBackup !== undefined ? window._snippetsJsBackup : localStorage.getItem("sandbox_js_backup_before_snippets");
+        if (_backup !== null && _backup !== undefined) {
+          window.jsEditor.setValue(_backup);
+          window._snippetsJsBackup = undefined;
+          try { localStorage.removeItem("sandbox_js_backup_before_snippets"); } catch (e) {}
+          alert("Snippets saved.\nYour JS code is back.");
+        } else {
+          alert("Snippets saved.");
+        }
       } catch (e) {
-        alert("❌ Invalid JSON format in JS Editor! Please check your brackets/quotes.");
+        alert("Invalid JSON.\nCheck brackets and quotes.");
       }
     });
   }
@@ -553,9 +1746,9 @@ document.addEventListener("DOMContentLoaded", () => {
           let parsed = JSON.parse(event.target.result);
           customSnippets = parsed;
           localStorage.setItem("sandbox_custom_snippets", JSON.stringify(parsed, null, 2));
-          alert("📂 Custom snippets file uploaded and applied successfully!");
+          alert("Snippets file imported.");
         } catch (err) {
-          alert("❌ Invalid JSON snippet file!");
+          alert("Invalid JSON file.");
         }
       };
       reader.readAsText(file);
@@ -598,7 +1791,6 @@ document.addEventListener("DOMContentLoaded", () => {
   if (localStorage.getItem("sandbox_css")) window.cssEditor.setValue(localStorage.getItem("sandbox_css"));
   if (localStorage.getItem("sandbox_js")) window.jsEditor.setValue(localStorage.getItem("sandbox_js"));
 
-  // 1.1 Drag-to-Resize Splitter
   const splitter = document.getElementById("drag-splitter");
   const editorSection = document.getElementById("editor-section");
   const previewSection = document.getElementById("preview-section");
@@ -642,7 +1834,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 50);
   });
 
-  // 1.2 Hamburger Layout Swap
   const hamburgerBtn = document.getElementById("hamburger-btn");
   if (hamburgerBtn && workspaceRow) {
     hamburgerBtn.addEventListener("click", () => {
@@ -658,7 +1849,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 1.3 Clean Bracket Auto-Closing & Enter Formatter
   function enableAutoCloseBrackets(editor) {
     editor.setOption("autoCloseBrackets", false);
     
@@ -672,7 +1862,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (
           (charBefore === '{' && charAfter === '}') ||
           (charBefore === '(' && charAfter === ')') ||
-          (charBefore === '[' && charAfter === ']')
+          (charBefore === '[' && charAfter === ']') ||
+          (charBefore === '`' && charAfter === '`')
         ) {
           event.preventDefault();
           const indentMatch = line.match(/^([ \t]*)/);
@@ -712,8 +1903,27 @@ document.addEventListener("DOMContentLoaded", () => {
     editor.on("beforeChange", function(cm, change) {
       if (change.origin === "+input" && change.text.length === 1 && change.text[0].length === 1) {
         const typedChar = change.text[0];
-        const pairs = { '{': '}', '(': ')', '[': ']', '"': '"', "'": "'" };
+        const pairs = { '{': '}', '(': ')', '[': ']', '"': '"', "'": "'", '`': '`' };
         if (pairs[typedChar]) {
+          const _lineText = cm.getLine(change.from.line) || "";
+          const _nextCh = _lineText.charAt(change.from.ch);
+          const _charBefore = _lineText.charAt(change.from.ch - 1);
+          const _hasSel = change.from.line !== change.to.line || change.from.ch !== change.to.ch;
+          // Overtype: if the same closing char is ahead, move over it instead of adding another one.
+          if (!_hasSel && (typedChar === ')' || typedChar === ']' || typedChar === '}' || typedChar === '"' || typedChar === "'" || typedChar === '`') && _nextCh === typedChar) {
+            change.cancel();
+            setTimeout(() => { cm.setCursor({ line: change.from.line, ch: change.from.ch + 1 }); }, 1);
+            return;
+          }
+          // Do not auto-close a quote in the middle of a word, like don't.
+          if (!_hasSel && (typedChar === '"' || typedChar === "'") && /[A-Za-z0-9_$]/.test(_charBefore)) return;
+          // Wrap selection instead of deleting it.
+          if (_hasSel) {
+            const _sel = cm.getSelection();
+            change.update(change.from, change.to, [typedChar + _sel + pairs[typedChar]], change.from);
+            setTimeout(() => { const cur = cm.getCursor(); cm.setCursor({ line: cur.line, ch: cur.ch - 1 }); }, 1);
+            return;
+          }
           change.update(change.from, change.to, [typedChar + pairs[typedChar]], change.from);
           setTimeout(() => {
             const cur = cm.getCursor();
@@ -728,7 +1938,6 @@ document.addEventListener("DOMContentLoaded", () => {
   enableAutoCloseBrackets(window.cssEditor);
   enableAutoCloseBrackets(window.jsEditor);
 
-  // 1.4 HTML Tag Auto-Closer
   let isAutoClosingTag = false;
   window.htmlEditor.on("change", function(cm, change) {
     if (isAutoClosingTag) return;
@@ -771,7 +1980,6 @@ document.addEventListener("DOMContentLoaded", () => {
   enableAutoScroll(window.cssEditor);
   enableAutoScroll(window.jsEditor);
 
-  // --- PRECISE COLOR CONVERTER LOGIC ---
   function parseColorString(str) {
     str = str.trim().toLowerCase();
     if (str.startsWith('#')) {
@@ -929,7 +2137,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (!rgbObj) {
-      alert("⚠️ Please either type a valid color in the input field or place your cursor inside/near a color code in the editor!");
+      alert("Enter a valid color\nor place cursor on a color code.");
       return;
     }
 
@@ -1000,7 +2208,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // --- Formatter & Share ---
   function formatCurrentEditor() {
     const activeTab = document.querySelector('#sandboxTabs .nav-link.active');
     if (!activeTab) return;
@@ -1047,7 +2254,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const base64 = btoa(unescape(encodeURIComponent(jsonStr)));
         const shareUrl = window.location.origin + window.location.pathname + '#code=' + base64;
         navigator.clipboard.writeText(shareUrl).then(() => {
-          alert("🔗 Shareable link copied to clipboard!");
+          alert("Share link copied.");
         }).catch(() => {
           prompt("Copy your share link:", shareUrl);
         });
@@ -1094,7 +2301,15 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // --- COMMAND PALETTE ENGINE ---
+  function getActiveEditorAndMode() {
+    const activeTab = document.querySelector('#sandboxTabs .nav-link.active');
+    if (!activeTab) return { editor: null, mode: null };
+    if (activeTab.id === 'html-tab') return { editor: window.htmlEditor, mode: 'htmlmixed' };
+    if (activeTab.id === 'css-tab') return { editor: window.cssEditor, mode: 'css' };
+    if (activeTab.id === 'js-tab') return { editor: window.jsEditor, mode: 'javascript' };
+    return { editor: null, mode: null };
+  }
+
   const cmdModal = document.getElementById("commandPaletteModal");
   const cmdInput = document.getElementById("commandPaletteInput");
   const cmdList = document.getElementById("commandPaletteList");
@@ -1145,8 +2360,110 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Define all available commands (including v1.5.0 Toggle Comment)
   const commands = [
+    {
+      id: "expand-snippet",
+      title: "Expand Snippet (At Cursor)",
+      category: "Editor",
+      shortcut: "Alt + S",
+      action: () => {
+        const { editor, mode } = getActiveEditorAndMode();
+        if (editor) {
+          editor.focus();
+          triggerSnippetExpansion(editor, mode);
+        }
+      }
+    },
+    {
+      id: "expand-emmet",
+      title: "Expand Emmet Abbreviation (HTML)",
+      category: "Editor",
+      shortcut: "Tab",
+      action: () => {
+        const { editor } = getActiveEditorAndMode();
+        if (editor) {
+          editor.focus();
+          triggerEmmetExpansion(editor, "htmlmixed");
+        }
+      }
+    },
+    {
+      id: "expand-emmet-css",
+      title: "Expand Emmet Abbreviation (CSS)",
+      category: "Editor",
+      shortcut: "Tab",
+      action: () => {
+        const { editor } = getActiveEditorAndMode();
+        if (editor) {
+          editor.focus();
+          triggerCssEmmetExpansion(editor);
+        }
+      }
+    },
+    {
+      id: "expand-all-css-emmet",
+      title: "Expand All CSS Emmet in File (Ek Baar Me Full)",
+      category: "Editor",
+      shortcut: "Ctrl + Shift + E",
+      action: () => {
+        const { editor, mode } = getActiveEditorAndMode();
+        if (editor) {
+          editor.focus();
+          if (mode === "css") expandAllCssEmmet(editor);
+          else triggerCssEmmetExpansion(editor);
+        }
+      }
+    },
+    {
+      id: "fold-at-cursor",
+      title: "Fold Code at Cursor",
+      category: "Editor",
+      shortcut: "Ctrl + Shift + [",
+      action: () => {
+        const { editor, mode } = getActiveEditorAndMode();
+        if (editor) { editor.focus(); foldAtCursor(editor, mode); }
+      }
+    },
+    {
+      id: "unfold-at-cursor",
+      title: "Unfold Code at Cursor",
+      category: "Editor",
+      shortcut: "Ctrl + Shift + ]",
+      action: () => {
+        const { editor, mode } = getActiveEditorAndMode();
+        if (editor) { editor.focus(); unfoldAtCursor(editor, mode); }
+      }
+    },
+    {
+      id: "fold-all",
+      title: "Fold All Code",
+      category: "Editor",
+      shortcut: "Ctrl + Shift + 0",
+      action: () => {
+        const { editor, mode } = getActiveEditorAndMode();
+        if (editor) { editor.focus(); foldAll(editor, mode); }
+      }
+    },
+    {
+      id: "unfold-all",
+      title: "Unfold All Code",
+      category: "Editor",
+      shortcut: "Ctrl + Shift + 9",
+      action: () => {
+        const { editor, mode } = getActiveEditorAndMode();
+        if (editor) { editor.focus(); unfoldAll(editor, mode); }
+      }
+    },
+    {
+      id: "toggle-eruda",
+      title: "Toggle Eruda Inspector (Inspect iframe Elements)",
+      category: "Debugging",
+      shortcut: "",
+      action: () => {
+        const next = typeof window.toggleEruda === "function" ? window.toggleEruda() : false;
+        alert(next ? "Eruda ON.\nTap gear icon in preview." : "Eruda OFF.\nPreview reloaded.");
+      }
+    },
     {
       id: "toggle-comment",
       title: "Toggle Comment (Active Line / Selection)",
@@ -1197,7 +2514,7 @@ document.addEventListener("DOMContentLoaded", () => {
       action: () => {
         if (window.htmlEditor) {
           window.htmlEditor.setValue("");
-          alert("🧹 HTML Editor cleared!");
+          alert("HTML editor cleared.");
         }
       }
     },
@@ -1209,7 +2526,7 @@ document.addEventListener("DOMContentLoaded", () => {
       action: () => {
         if (window.cssEditor) {
           window.cssEditor.setValue("");
-          alert("🧹 CSS Editor cleared!");
+          alert("CSS editor cleared.");
         }
       }
     },
@@ -1221,7 +2538,7 @@ document.addEventListener("DOMContentLoaded", () => {
       action: () => {
         if (window.jsEditor) {
           window.jsEditor.setValue("");
-          alert("🧹 JavaScript Editor cleared!");
+          alert("JavaScript editor cleared.");
         }
       }
     },
@@ -1269,7 +2586,7 @@ document.addEventListener("DOMContentLoaded", () => {
           toggle.checked = !toggle.checked;
           toggle.dispatchEvent(new Event("change"));
         } else {
-          alert("⚠️ Font ligatures are not supported by the currently selected font family.");
+          alert("Font ligatures not supported\nby this font.");
         }
       }
     },
@@ -1624,7 +2941,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // --- Settings UI handlers ---
   if (fontSizeRange && fontSizeBadge) {
     fontSizeRange.addEventListener("input", (e) => {
       const val = e.target.value;
@@ -1764,6 +3080,26 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Reload preview when Eruda toggle changes.
+  const erudaToggleEl = document.getElementById("erudaToggle");
+  if (erudaToggleEl) {
+    erudaToggleEl.addEventListener("change", (e) => {
+      const on = e.target.checked;
+      localStorage.setItem("sandbox_eruda", on);
+      if (typeof updatePreview === "function") updatePreview();
+    });
+  }
+  // Global helper so Command Palette can toggle it too.
+  window.toggleEruda = function() {
+    const cur = localStorage.getItem("sandbox_eruda") === "true";
+    const next = !cur;
+    localStorage.setItem("sandbox_eruda", next);
+    const t = document.getElementById("erudaToggle");
+    if (t) t.checked = next;
+    if (typeof updatePreview === "function") updatePreview();
+    return next;
+  };
+
   if (lineNumToggle) {
     lineNumToggle.addEventListener("change", (e) => {
       const showNums = e.target.checked;
@@ -1790,8 +3126,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // --- Backup & Restore (v1.5.0 Dynamic Version & Snippets Support) ---
-  const currentVersion = "1.5.0";
+  const currentVersion = "1.6.0";
   const menuJsonExportBtn = document.getElementById("menu-json-export-btn");
   if (menuJsonExportBtn) {
     menuJsonExportBtn.addEventListener("click", () => {
@@ -1865,10 +3200,10 @@ document.addEventListener("DOMContentLoaded", () => {
             if (data.settings.framework) localStorage.setItem("sandbox_framework", data.settings.framework);
             if (data.settings.frameworkLabel) localStorage.setItem("sandbox_framework_label", data.settings.frameworkLabel);
           }
-          alert("📂 Project and snippets restored successfully!");
+          alert("Project restored.");
           location.reload();
         } catch (err) {
-          alert("❌ Invalid JSON backup file!");
+          alert("Invalid backup file.");
           console.error(err);
         }
       };
@@ -1931,7 +3266,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // --- Console Loggers ---
   window.appendLog = function(type, message) {
     const consoleDiv = document.getElementById("js-console");
     if (!consoleDiv) return;
@@ -1971,11 +3305,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (targetLine !== null) {
       logItem.addEventListener("click", () => {
-        const jsTabBtn = document.getElementById("js-tab");
-        if (jsTabBtn) {
-          const bsTab = new bootstrap.Tab(jsTabBtn);
-          bsTab.show();
-        }
+        showEditorTab("js-tab", "js-pane");
 
         setTimeout(() => {
           if (window.jsEditor) {
@@ -2014,7 +3344,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Live Update Preview
   let updateTimer = null;
   function updatePreview() {
     const htmlCode = window.htmlEditor.getValue();
@@ -2031,7 +3360,13 @@ document.addEventListener("DOMContentLoaded", () => {
     window.clearConsole();
     const framework = localStorage.getItem("sandbox_framework") || "none";
     const frameworkCDNTag = getFrameworkCDN(framework);
+    // Eruda: inject inside the iframe when enabled in Settings.
+    const erudaEnabled = localStorage.getItem("sandbox_eruda") === "true";
+    // Eruda: both scripts go in HEAD, nothing in BODY. Inline script with defer does not defer, so init on DOMContentLoaded with retry.
+    const erudaScriptTag = erudaEnabled ? '<script src="https://cdn.jsdelivr.net/npm/eruda" defer><\/script>' : "";
+    const erudaInitTag = erudaEnabled ? '<script>window.addEventListener("DOMContentLoaded",function(){var t=0;function tryInit(){if(window.eruda){try{if(!window.__erudaInited){window.__erudaInited=true;eruda.init({tool:["console","elements","network","resources","info"]});}}catch(e){}}else if(t++<50){setTimeout(tryInit,100);}}tryInit();});<\/script>' : "";
 
+    const safeJsCode = String(jsCode || "").replace(/<\/script>/gi, "<\\/script>");
     const combinedContent = `
       <!DOCTYPE html>
       <html lang="en">
@@ -2039,10 +3374,9 @@ document.addEventListener("DOMContentLoaded", () => {
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         ${frameworkCDNTag}
+        ${erudaScriptTag}
+        ${erudaInitTag}
         <style>${cssCode}</style>
-      </head>
-      <body>
-        ${htmlCode}
         <script>
           function formatArg(arg) {
             if (arg === null) return 'null';
@@ -2067,12 +3401,28 @@ document.addEventListener("DOMContentLoaded", () => {
             sendLog('error', [msg + ' (Line: ' + (line || 1) + ')']);
             return true;
           };
-          try {
-            ${jsCode}
-          } catch (err) {
-            console.error(err.message + ' (Line: 1)');
-          }
+          // User JS runs after DOM is ready so getElementById works. Shim DOMContentLoaded for late listeners.
+          (function(){
+            var _origDocAdd = document.addEventListener.bind(document);
+            document.addEventListener = function(type, listener, opts){
+              if (type === 'DOMContentLoaded' && document.readyState !== 'loading') {
+                setTimeout(function(){ try{ listener.call(document, new Event('DOMContentLoaded')); }catch(e){} }, 0);
+                return;
+              }
+              return _origDocAdd(type, listener, opts);
+            };
+          })();
+          window.addEventListener('DOMContentLoaded', function(){
+            try {
+              ${safeJsCode}
+            } catch (err) {
+              console.error(err.message + ' (Line: 1)');
+            }
+          });
         </script>
+      </head>
+      <body>
+        ${htmlCode}
       </body>
       </html>
     `;
