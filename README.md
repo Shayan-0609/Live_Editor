@@ -4,7 +4,7 @@
 
 # ⚡ Mobile Sandbox IDE (Live Editor)
 
-![Version: 1.5.0](https://img.shields.io/badge/version-v1.5.0-blue)
+![Version: 1.6.0](https://img.shields.io/badge/version-v1.6.0-blue)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A lightweight, multi-tab web code sandbox application designed specifically for mobile and desktop developers. Built using native JavaScript, CodeMirror 5, and Bootstrap 5.
@@ -17,35 +17,36 @@ A lightweight, multi-tab web code sandbox application designed specifically for 
 
 ---
 
-## ✨ Features
+## Features
 
 ### 🚀 Power-User & Navigation Tools
-- **⚡ VS Code Style Command Palette (`Alt + P` or `Ctrl + Shift + P`):** Lightning-fast command hub to toggle preferences (*Word Wrap, Line Numbers, Font Ligatures*), switch themes (*Dracula, Monokai, Light*), change CSS frameworks (*Vanilla, Bootstrap, Tailwind*), clear individual editors or console, trigger Zen Modes, and execute More Settings actions instantly without opening the settings drawer.
-- **🖥️ Zen Mode Layouts:** Fullscreen distraction-free toggles specifically for the Editor Panel or Preview Panel to maximize coding space on mobile and desktop.
+- **⚡ VS Code Style Command Palette (`Alt + P` or `Ctrl + Shift + P`):** Lightning-fast command hub to toggle preferences (*Word Wrap, Line Numbers, Font Ligatures*), switch themes (*Dracula, Monokai, Default / Light*), change CSS frameworks (*Vanilla, Bootstrap, Tailwind*), clear individual editors or console, trigger Zen Modes, and run More Settings actions instantly without opening the settings drawer.
+- **🗺️ Interactive Code Breadcrumbs:** Dynamic file path and selector hierarchy trail at the top of editors. Click any crumb to jump straight to that line, and it automatically hides when you switch to the Log tab.
+- **🖥️ Zen Mode Layouts:** Fullscreen, distraction-free toggles for the Editor Panel or the Preview Panel, to maximise coding space on mobile and desktop.
 
 ### 🧰 Smart Code Editing & Automation
-- **Custom JSON Snippets Engine:** Load, edit, and save your custom shortcuts directly inside the JS Editor with auto-validation (e.g., `clg` → `console.log()`).
-- **Enhanced Emmet & Dynamic Counter ($):** Expand Emmet abbreviations seamlessly (e.g., `h1{heading-$}` expands to `<h1>heading-1</h1>`, `ul>li*3>{Item $}` auto-numbers list items).
-- **Auto Bracket & Tag Closing:** Automatic pair completion for brackets (`{}`, `()`, `[]`) and auto-closing HTML tags with clean indentation on `Enter`.
-- **💬 Multi-Language Comment Toggle (`Ctrl + /` or `Cmd + /`):** Instantly comment or uncomment active lines or code selections across HTML (`<!-- -->`), CSS (`/* */`), and JavaScript (`//`).
-- **Custom JSON Snippets Engine & Persistence:** Load, edit, and save custom shortcuts directly inside the JS Editor with automatic merging against defaults—ensuring new built-in entries (like the complete `lorem10` to `lorem50` scale and `lorem` without value and `lorem100`) are seamlessly preserved without wiping user data.
+- **📂 Built-in Code Folding:** Clean gutter fold markers (`▼` / `▶`) with keyboard shortcuts (`Ctrl + Shift + [` / `]`, `0`, `9`) to collapse and expand code blocks, with no CodeMirror addon needed.
+- **🔮 Advanced Emmet & Live Preview Popup:** Instant abbreviation expansion for HTML and CSS (*e.g., `df`, `jcc`, `aic`, `m10`, `bgc#333`, `w100p`*), plus a floating live preview that shows only while typing, never on tap, and never covers the active line.
+- **📝 Custom JSON Snippets Engine:** Load, edit, and save your custom shortcuts directly inside the JS Editor with auto-validation (e.g., `clg` → `console.log()`) and `Alt + S` shortcut triggers. Your JS is backed up before editing and restored on save.
+- **⌨️ Auto Bracket, Quote & Tag Closing:** Automatic pair completion for brackets (`{}`, `()`, `[]`), quotes (`""`, `''`) and backticks, plus auto-closing HTML tags with clean indentation on `Enter`.
+- **💬 Multi-Language Comment Toggle (`Ctrl + /` or `Cmd + /`):** Instantly comment or uncomment the active line or selection across HTML (`<!-- -->`), CSS (`/* */`), and JavaScript (`//`).
 
 ### 🎨 Color & Appearance Tools
-- **Cursor Color Converter & Smart UI:** Convert color values (HEX ↔ RGB ↔ HSL) instantly at your editor cursor position or via manual input.
-- **Adaptive Field-Colors & Live Value Display:** The color input field dynamically updates its background, text, and border colors based on the color value's brightness (YIQ formula), ensuring instant visibility and readability.
-- **Font & Theme Customization:** Switch between coding fonts (*Fira Code, JetBrains Mono, Google Sans Code, Source Code Pro*), adjust font sizes, weights (300–700), line heights, font ligatures, and themes (*Dracula, Monokai*).
-- **Instant CSS Framework Injection:** Toggle seamlessly between Vanilla CSS, Bootstrap 5.3, and Tailwind CSS without manual setup.
+- **🎨 Cursor Color Converter:** Convert the color at your cursor, or a value you type, between HEX, RGB and HSL.
+- **🌗 Adaptive Field Colors & Live Value Display:** The color input field dynamically updates its background, text, and border colors from the color value's brightness (YIQ formula), so the value stays readable.
+- **🔤 Font & Theme Customization:** Switch between coding fonts (*Fira Code, JetBrains Mono, Google Sans Code, Source Code Pro*), adjust font size, weight (300–700), line height, font ligatures, and themes (*Dracula, Monokai, Default / Light*).
+- **🧩 Instant CSS Framework Injection:** Switch between Vanilla CSS, Bootstrap 5.3, and Tailwind CSS without manual setup.
 
 ### ⚡ Live Preview & Debugging
-- **Real-Time Rendering:** Instant iframe preview powered by `srcdoc` debounced for zero performance lag.
-- **Smart Console Log & Line Navigation:** Integrated console for `log`, `warn`, `error`, and `info`. Click on any logged error line to jump straight to that line in the JS editor.
-- **Draggable Splitter & Auto-Saved Layout Position:** Drag-to-resize editor/preview height ratio dynamically or flip layout position using the window toolbar toggle. The chosen layout position (editor/preview orientation) auto-saves across page refreshes while resetting splitter size gracefully.
+- **👀 Real-Time Rendering:** Instant iframe preview powered by `srcdoc`, debounced so typing stays smooth.
+- **🐞 Console & Mobile Devtools (Eruda):** Integrated error logging and console routing with an Eruda mobile inspector toggle. Click any logged error line to jump straight to that line in the JS editor, with a temporary highlight.
+- **↔️ Draggable Splitter & Auto-Saved Layout Position:** Drag to resize the editor/preview height ratio, or flip the layout with the toolbar toggle. The layout orientation auto-saves across refreshes, while the splitter size resets gracefully.
 
 ### 💾 Backup, Export & Sharing
-- **URL Base64 Code Sharing:** Share complete HTML/CSS/JS state instantly via lightweight URL hash links.
-- **Workspace Backup & Restore:** Export and restore full project state along with editor settings via `.json` files.
-- **Single-File Export:** Download your project directly as a standalone `index.html` file with embedded styles, scripts, and CDNs.
-- **Code Beautifier:** Single-click formatting for HTML, CSS, and JS using `JS-Beautify` (or `Alt + F` shortcut).
+- **🔗 URL Base64 Code Sharing:** Share the full HTML/CSS/JS state in one lightweight URL hash link (`#code=...`).
+- **💾 Workspace Backup & Restore:** Export and restore the full project state, including editor settings, via `.json` files.
+- **📄 Single-File Export:** Download your project as a standalone `index.html` file with embedded styles, scripts, and framework CDNs. Eruda stays preview-only and is not included in the export.
+- **✨ Code Beautifier:** One-click formatting for HTML, CSS, and JS using `JS-Beautify` (or `Alt + F` shortcut).
 
 ---
 

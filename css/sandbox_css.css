@@ -127,8 +127,10 @@ body {
   background-color: #5ac05a;
 }
 
-/* Style the input field */
-input[type="text"] {
+/* Style the input field - AUDIT FIX: Pehle ye global input[type="text"] tha, jo
+   Command Palette ke input ko bhi pakad leta tha (pointer-events: none + white bg).
+   Ab sirf preview toolbar ke fake address-bar tak scoped hai. */
+.toolbar-row .middle input[type="text"] {
   width: 100%;
   border-radius: 3px;
   border: none;
@@ -140,6 +142,10 @@ input[type="text"] {
   pointer-events: none;
   font-size: 0.75rem;
   margin-top: 0;
+}
+/* AUDIT FIX: Command Palette input hamesha clickable/typeable rahe */
+#commandPaletteInput {
+  pointer-events: auto !important;
 }
 
 /* Three bars (hamburger menu) */
