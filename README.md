@@ -4,7 +4,7 @@
 
 # ⚡ Mobile Sandbox IDE (Live Editor)
 
-![Version: 1.6.1](https://img.shields.io/badge/version-v1.6.1-blue)
+![Version: 1.7.0](https://img.shields.io/badge/version-v1.7.0-blue)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A lightweight, multi-tab web code sandbox application designed specifically for mobile and desktop developers. Built using native JavaScript, CodeMirror 5, and Bootstrap 5.
@@ -28,10 +28,16 @@ A lightweight, multi-tab web code sandbox application designed specifically for 
 ### 🧰 Smart Code Editing & Automation
 
 - **📂 Built-in Code Folding:** Clean gutter fold markers (`▼` / `▶`) with keyboard shortcuts (`Ctrl + Shift + [` / `]`, `0`, `9`) to collapse and expand code blocks, with no CodeMirror addon needed.
-- **🔮 Advanced Emmet & Live Preview Popup:** Instant abbreviation expansion for HTML and CSS (_e.g., `df`, `jcc`, `aic`, `m10`, `bgc#333`, `w100p`_), plus a floating live preview that shows only while typing, never on tap, and never covers the active line.
+- **🔮 Advanced Emmet & Live Preview Popup:** Instant abbreviation expansion for HTML and CSS (_e.g., `df`, `jcc`, `aic`, `m10`, `bgc#333`, `w100p`_), plus a floating live preview that shows only while typing, never on tap, and never covers the active line, and opens upward when the cursor is near the bottom of the editor.
 - **📝 Custom JSON Snippets Engine:** Load, edit, and save your custom shortcuts directly inside the JS Editor with auto-validation (e.g., `clg` → `console.log()`) and `Alt + S` shortcut triggers. Your JS is backed up before editing and restored on save.
 - **⌨️ Auto Bracket, Quote & Tag Closing:** Automatic pair completion for brackets (`{}`, `()`, `[]`), quotes (`""`, `''`) and backticks, plus auto-closing HTML tags with clean indentation on `Enter`.
 - **💬 Multi-Language Comment Toggle (`Ctrl + /` or `Cmd + /`):** Instantly comment or uncomment the active line or selection across HTML (`<!-- -->`), CSS (`/* */`), and JavaScript (`//`).
+
+### 🔍 Built-in Linter & Problems Panel
+
+- **🔍 Built-in Linter (VS Code Style):** Deep real-time checks with no external dependency — HTML (unknown tags with suggestions, unclosed tags), CSS (unknown properties with suggestions, invalid length units like `10pxx` → `px`, invalid colors and hex values), and JavaScript (typos on known objects and globals like `consol` → `console`, unknown event names).
+- **⚠️ Problems Panel:** Live problem count with one-click jump to the exact line. Problems show as red/yellow/blue wavy underlines with a matching light background on the exact token only — no tooltips. When everything is clean, it shows "No problems found! Happy Coding".
+- **🧾 Log Tab Layout:** Console output on the left with always-visible [Problems (0)] | [Logs] | [Clear] buttons on the right, so the problem count stays visible even at zero.
 
 ### 🎨 Color & Appearance Tools
 

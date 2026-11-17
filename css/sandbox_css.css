@@ -16,9 +16,11 @@ body {
 #editor-section {
   order: 1;
 }
+
 #drag-splitter {
   order: 2;
 }
+
 #preview-section {
   order: 3;
 }
@@ -26,9 +28,11 @@ body {
 #workspace-row.preview-on-top #preview-section {
   order: 1;
 }
+
 #workspace-row.preview-on-top #drag-splitter {
   order: 2;
 }
+
 #workspace-row.preview-on-top #editor-section {
   order: 3;
 }
@@ -115,9 +119,11 @@ body {
 .red {
   background-color: #ed594a;
 }
+
 .yellow {
   background-color: #fdd800;
 }
+
 .green {
   background-color: #5ac05a;
 }
@@ -136,6 +142,7 @@ body {
   font-size: 0.75rem;
   margin-top: 0;
 }
+
 /* Keep Command Palette input editable. */
 #commandPaletteInput {
   pointer-events: auto !important;
@@ -164,10 +171,17 @@ body {
   border: none;
 }
 
+/* A tab pane with d-flex (console pane) must still hide when inactive:
+   Bootstrap's .tab-pane display:none loses to .d-flex !important. */
+#sandboxTabContent > .tab-pane:not(.active) {
+  display: none !important;
+}
+
 /* Hide scrollbar for tab navigation */
 #sandboxTabs::-webkit-scrollbar {
   display: none;
 }
+
 #sandboxTabs {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -234,6 +248,7 @@ body {
   left: 0;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   background: rgba(0, 0, 0, 0.65);
   backdrop-filter: blur(3px);
   z-index: 9999;
@@ -255,8 +270,14 @@ body {
 }
 
 @keyframes cmdFadeIn {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .command-palette-header {
@@ -306,4 +327,142 @@ body {
   padding: 2px 5px;
   border-radius: 3px;
   color: #aaaaaa;
+}
+
+/* ===== Log tab header — always one line, smaller on mobile ===== */
+.log-header-bar {
+  padding: 0.25rem 1rem;
+  font-size: 0.75rem;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+.log-header-label {
+  min-width: 0;
+  /* allow shrink in flex so truncate works */
+}
+
+/* ===== v1.7.0 — Log tab buttons (modern pills) ===== */
+.log-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: #d7d7de;
+  transition: background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.1s;
+}
+
+.log-tab-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.log-tab-btn:active {
+  transform: scale(0.97);
+}
+
+.log-tab-btn.is-active {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #fff;
+}
+
+/* Problems button: always red + white text */
+#problems-tab-btn {
+  background: #e0241a;
+  border-color: #e0241a;
+  color: #fff;
+}
+
+#problems-tab-btn:hover {
+  background: #c81e1e;
+  color: #fff;
+}
+
+#problems-tab-btn .problems-count-badge {
+  min-width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  border-radius: 999px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  background: #fff;
+  color: #e0241a;
+}
+
+#problems-tab-btn.is-active {
+  background: #c81e1e;
+  box-shadow: 0 0 0 2px rgba(255, 59, 48, 0.35);
+}
+
+@media (max-width: 576px) {
+  .log-header-bar {
+    padding: 0.25rem 0.5rem;
+  }
+  .log-header-label {
+    font-size: 0.65rem;
+  }
+  .log-tab-btn {
+    font-size: 0.6rem;
+    padding-left: 0.3rem;
+    padding-right: 0.3rem;
+    gap: 4px;
+  }
+  #problems-tab-btn .problems-count-badge {
+    min-width: 15px;
+    height: 15px;
+    font-size: 0.55rem;
+  }
+}
+
+/* ===== v1.7.0 — Lint marks (wavy underline + light bg, no tooltip) ===== */
+.lint-mark-error {
+  background-color: rgba(255, 59, 48, 0.12);
+  text-decoration: underline wavy #ff3b30;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 2px;
+}
+
+.lint-mark-warning {
+  background-color: rgba(255, 204, 0, 0.12);
+  text-decoration: underline wavy #ffcc00;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 2px;
+}
+
+.lint-mark-hint {
+  background-color: rgba(77, 163, 255, 0.12);
+  text-decoration: underline wavy #4da3ff;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 2px;
+}
+
+/* ===== v1.7.0 — Problems rows ===== */
+.problem-row {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  padding: 4px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.problem-row:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.problem-row.active {
+  background: rgba(255, 255, 255, 0.14);
 }
