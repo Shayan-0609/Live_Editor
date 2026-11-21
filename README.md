@@ -4,7 +4,7 @@
 
 # ⚡ Mobile Sandbox IDE (Live Editor)
 
-![Version: 1.7.0](https://img.shields.io/badge/version-v1.7.0-blue)
+![Version: 1.7.1](https://img.shields.io/badge/version-v1.7.1-blue)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A lightweight, multi-tab web code sandbox application designed specifically for mobile and desktop developers. Built using native JavaScript, CodeMirror 5, and Bootstrap 5.
@@ -38,6 +38,7 @@ A lightweight, multi-tab web code sandbox application designed specifically for 
 - **🔍 Built-in Linter (VS Code Style):** Deep real-time checks with no external dependency — HTML (unknown tags with suggestions, unclosed tags), CSS (unknown properties with suggestions, invalid length units like `10pxx` → `px`, invalid colors and hex values), and JavaScript (typos on known objects and globals like `consol` → `console`, unknown event names).
 - **⚠️ Problems Panel:** Live problem count with one-click jump to the exact line. Problems show as red/yellow/blue wavy underlines with a matching light background on the exact token only — no tooltips. When everything is clean, it shows "No problems found! Happy Coding".
 - **🧾 Log Tab Layout:** Console output on the left with always-visible [Problems (0)] | [Logs] | [Clear] buttons on the right, so the problem count stays visible even at zero.
+- **📊 Log Counter Badges:** Second header shows live counters — blue (logs + info), yellow (warnings), red (errors) — with triangle icons, right-aligned, updating on every console log. Counters reset on Clear / preview rebuild.
 
 ### 🎨 Color & Appearance Tools
 
@@ -53,6 +54,7 @@ A lightweight, multi-tab web code sandbox application designed specifically for 
 - **📦 Offline Eruda (No CDN Needed):** Eruda loads from a local bundled file, so the inspector works even without internet.
 - **🗃️ Eruda Resources Panel:** Inspect Local Storage, Session Storage, Cookies, Scripts, Stylesheets, Iframes, and Images right inside the preview — values persist across preview rebuilds.
 - **↔️ Draggable Splitter & Auto-Saved Layout Position:** Drag to resize the editor/preview height ratio, or flip the layout with the toolbar toggle. The layout orientation auto-saves across refreshes, while the splitter size resets gracefully.
+- **📝 Project Title & Fake URL Bar:** Default project name `My Project` with an editable fake browser URL bar showing `http://My_Project/index.html` — spaces become underscores in the URL, the title stays raw. Tap to edit with a text cursor, no select-all.
 
 ### 💾 Backup, Export & Sharing
 
